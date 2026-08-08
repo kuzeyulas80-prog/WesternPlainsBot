@@ -180,3 +180,14 @@ client.on('interactionCreate', async interaction => {
 });
 
 client.login(token);
+const express = require('express');
+const app = express();
+const port = process.env.PORT || 3000;
+
+app.get('/', (req, res) => {
+  res.send('Bot aktif!');
+});
+
+app.listen(port, () => {
+  console.log(`Sunucu ${port} portunda çalışıyor.`);
+});
