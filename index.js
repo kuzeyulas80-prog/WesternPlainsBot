@@ -1,3 +1,13 @@
+  const express = require('express');
+const app = express();
+
+app.get('/', (req, res) => {
+  res.send('Bot aktif!');
+});
+
+app.listen(3000, () => {
+  console.log('Sunucu 3000 portunda çalışıyor.');
+});
 const express = require('express');
 const app = express();
 const port = process.env.PORT || 3000;
