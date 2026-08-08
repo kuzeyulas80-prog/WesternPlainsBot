@@ -1,5 +1,5 @@
 const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
-const { token } = require('./config.json');
+const token = process.env.TOKEN;
 
 // CHANNEL IDS:
 const PROMOTION_CHANNEL_ID = '1535611568589373550';
