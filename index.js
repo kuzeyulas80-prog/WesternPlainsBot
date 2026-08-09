@@ -41,7 +41,7 @@ const mainGuildCommands = [
     .setName('infraction')
     .setDescription('Issues an infraction to a user.')
     .addUserOption(option => option.setName('user').setDescription('The user to penalize').setRequired(true))
-    .addStringOption(option => option.setName('type').setDescription('Type or level of infraction').setRequired(true))
+    .addStringOption(option => option.setName('type').setDescription('Type or level of punishment').setRequired(true))
     .addStringOption(option => option.setName('reason').setDescription('The reason for infraction').setRequired(true)),
   new SlashCommandBuilder()
     .setName('say')
@@ -104,7 +104,7 @@ client.on('interactionCreate', async interaction => {
     await interaction.reply({ content: 'Message sent successfully as an embed!', ephemeral: true });
   } 
 
-  // 2. PROMOTE COMMAND (Main Server Only - Includes New Rank & Reason)
+  // 2. PROMOTE COMMAND (Main Server Only)
   else if (commandName === 'promote' && interaction.guildId === MAIN_GUILD_ID) {
     await interaction.deferReply({ ephemeral: true });
 
@@ -115,26 +115,27 @@ client.on('interactionCreate', async interaction => {
 
     if (promoChannel) {
       const embed = new EmbedBuilder()
-        .setColor(0x00FF00)
-        .setTitle('🎉 New Promotion Awarded')
-        .setDescription('A new promotion has been successfully processed.')
+        .setColor(0x00FF00) // Yeşil tema
+        .setTitle('❌🎉 Western Plains Promotion')
+        .setDescription(`Dear ${targetUser},\n\nCongratulations, the Management Team has decided to promote you! Your dedication, professionalism, and commitment to excellence have truly set you apart—keep up the outstanding work as you take on this new role.\n\n`)
         .addFields(
-          { name: '👤 Promoted User', value: `${targetUser} (${targetUser.tag})`, inline: false },
-          { name: '⭐ New Rank', value: newRank, inline: false },
-          { name: '📝 Reason', value: reason, inline: false },
-          { name: '🛡️ Authorized By', value: `${interaction.user}`, inline: false }
+          { name: '👤 User Promoted', value: `${targetUser}`, inline: true },
+          { name: '⭐ New Role', value: newRank, inline: true },
+          { name: 'ℹ️ Reason(s)', value: reason, inline: false },
+          { name: '🪐 Staff Issuer', value: `${interaction.user}`, inline: false }
         )
         .setTimestamp()
         .setFooter({ text: 'Western Plains Management System' });
 
-      await promoChannel.send({ embeds: [embed] });
+      // Embed dışında kullanıcıyı pinglemek için content kısmına kullanıcı yazıyoruz
+      await promoChannel.send({ content: `${targetUser}`, embeds: [embed] });
       await interaction.editReply({ content: 'Promotion logged successfully.' });
     } else {
       await interaction.editReply({ content: 'Error: Promotion channel not found!' });
     }
   } 
 
-  // 3. INFRACTION COMMAND (Main Server Only - Includes Infraction Type & Thread)
+  // 3. INFRACTION COMMAND (Main Server Only)
   else if (commandName === 'infraction' && interaction.guildId === MAIN_GUILD_ID) {
     await interaction.deferReply({ ephemeral: true });
 
@@ -145,22 +146,24 @@ client.on('interactionCreate', async interaction => {
 
     if (infractionChannel) {
       const embed = new EmbedBuilder()
-        .setColor(0xFF0000)
-        .setTitle('⚠️ Official Infraction Issued')
-        .setDescription('An infraction record has been created.')
+        .setColor(0xFF0000) // Kırmızı tema
+        .setTitle('❌ Western Plains Infraction')
+        .setDescription(`Dear ${targetUser},\n\nThe Internal Affairs team has carefully reviewed your recent actions and decided to issue a **${infractionType}**. This decision was made based on the provided evidence of your recent actions.\n\n`)
         .addFields(
-          { name: '👤 Penalized User', value: `${targetUser} (${targetUser.tag})`, inline: false },
-          { name: '⚖️ Infraction Type', value: infractionType, inline: false },
-          { name: '📝 Reason', value: reason, inline: false },
-          { name: '🛡️ Issued By', value: `${interaction.user}`, inline: false }
+          { name: '👤 User Infracted', value: `${targetUser}`, inline: true },
+          { name: '⚡ Punishment', value: infractionType, inline: true },
+          { name: 'ℹ️ Reason(s)', value: reason, inline: false },
+          { name: '🪐 Staff Issuer', value: `${interaction.user}`, inline: false }
         )
         .setTimestamp()
         .setFooter({ text: 'Western Plains Management System' });
 
-      const sentMessage = await infractionChannel.send({ embeds: [embed] });
+      // Embed dışında kullanıcıyı pingleyerek gönderiyoruz
+      const sentMessage = await infractionChannel.send({ content: `${targetUser}`, embeds: [embed] });
 
+      // Alt başlık (Thread) açma
       await sentMessage.startThread({
-        name: `Infraction Discussion - ${targetUser.username}`,
+        name: `Western Plains Infraction Discussion - ${targetUser.username}`,
         autoArchiveDuration: 1440,
         reason: 'Infraction discussion thread created automatically.'
       });
