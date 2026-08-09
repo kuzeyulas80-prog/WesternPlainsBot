@@ -87,7 +87,7 @@ client.on('interactionCreate', async interaction => {
 
   const { commandName } = interaction;
 
-  // 1. SAY COMMAND (Available on both servers - Sends as an Embed)
+  // 1. SAY COMMAND
   if (commandName === 'say') {
     const messageContent = interaction.options.getString('message');
     
@@ -101,8 +101,10 @@ client.on('interactionCreate', async interaction => {
     await interaction.reply({ content: 'Message sent successfully as an embed!', ephemeral: true });
   } 
 
-  // 2. PROMOTE COMMAND (Main Server Only - Large Embed with Image)
+  // 2. PROMOTE COMMAND (Fixed with deferReply to prevent timeout)
   else if (commandName === 'promote' && interaction.guildId === MAIN_GUILD_ID) {
+    await interaction.deferReply({ ephemeral: true });
+
     const targetUser = interaction.options.getUser('user');
     const promoChannel = interaction.guild.channels.cache.get(PROMO_CHANNEL_ID);
 
@@ -115,19 +117,21 @@ client.on('interactionCreate', async interaction => {
           { name: '👤 Promoted User', value: `${targetUser} (${targetUser.tag})`, inline: false },
           { name: '🛡️ Authorized By', value: `${interaction.user}`, inline: false }
         )
-        .setImage('BURAYA_GORSELIN_LINKINI_YAZ') // Discord'a yüklediğin görselin bağlantısını buraya ekleyebilirsin
+        .setImage('BURAYA_GORSELIN_LINKINI_YAZ') // Görsel bağlantısını buraya ekleyebilirsin
         .setTimestamp()
         .setFooter({ text: 'Western Plains Management System' });
 
       await promoChannel.send({ embeds: [embed] });
-      await interaction.reply({ content: 'Promotion logged successfully.', ephemeral: true });
+      await interaction.editReply({ content: 'Promotion logged successfully.' });
     } else {
-      await interaction.reply({ content: 'Error: Promotion channel not found!', ephemeral: true });
+      await interaction.editReply({ content: 'Error: Promotion channel not found!' });
     }
   } 
 
-  // 3. INFRACTION COMMAND (Main Server Only - With Thread)
+  // 3. INFRACTION COMMAND
   else if (commandName === 'infraction' && interaction.guildId === MAIN_GUILD_ID) {
+    await interaction.deferReply({ ephemeral: true });
+
     const targetUser = interaction.options.getUser('user');
     const reason = interaction.options.getString('reason');
     const infractionChannel = interaction.guild.channels.cache.get(INFRACTION_CHANNEL_ID);
@@ -153,14 +157,16 @@ client.on('interactionCreate', async interaction => {
         reason: 'Infraction discussion thread created automatically.'
       });
 
-      await interaction.reply({ content: 'Infraction logged and discussion thread opened successfully.', ephemeral: true });
+      await interaction.editReply({ content: 'Infraction logged and discussion thread opened successfully.' });
     } else {
-      await interaction.reply({ content: 'Error: Infraction channel not found!', ephemeral: true });
+      await interaction.editReply({ content: 'Error: Infraction channel not found!' });
     }
   } 
 
-  // 4. CASE COMMAND (Department Server Only)
+  // 4. CASE COMMAND
   else if (commandName === 'case' && interaction.guildId === DEPT_GUILD_ID) {
+    await interaction.deferReply({ ephemeral: true });
+
     const detail = interaction.options.getString('detail');
     const caseChannel = interaction.guild.channels.cache.get(CASE_CHANNEL_ID);
 
@@ -177,9 +183,9 @@ client.on('interactionCreate', async interaction => {
         .setFooter({ text: 'Western Plains Department System' });
 
       await caseChannel.send({ embeds: [embed] });
-      await interaction.reply({ content: 'Case file created and logged successfully.', ephemeral: true });
+      await interaction.editReply({ content: 'Case file created and logged successfully.' });
     } else {
-      await interaction.reply({ content: 'Error: Case channel not found in this server!', ephemeral: true });
+      await interaction.editReply({ content: 'Error: Case channel not found in this server!' });
     }
   }
 });
