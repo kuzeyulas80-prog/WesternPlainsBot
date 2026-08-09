@@ -87,11 +87,18 @@ client.on('interactionCreate', async interaction => {
 
   const { commandName } = interaction;
 
-  // 1. SAY COMMAND (Available on both servers)
+  // 1. SAY COMMAND (Available on both servers - Sends as an Embed)
   if (commandName === 'say') {
     const messageContent = interaction.options.getString('message');
-    await interaction.channel.send(messageContent);
-    await interaction.reply({ content: 'Message sent successfully!', ephemeral: true });
+    
+    const embed = new EmbedBuilder()
+      .setColor(0x5865F2)
+      .setDescription(messageContent)
+      .setTimestamp()
+      .setFooter({ text: `Sent by ${interaction.user.tag}` });
+
+    await interaction.channel.send({ embeds: [embed] });
+    await interaction.reply({ content: 'Message sent successfully as an embed!', ephemeral: true });
   } 
 
   // 2. PROMOTE COMMAND (Main Server Only)
@@ -118,7 +125,7 @@ client.on('interactionCreate', async interaction => {
     }
   } 
 
-  // 3. INFRACTION COMMAND (Main Server Only)
+  // 3. INFRACTION COMMAND (Main Server Only - With Infraction Discussion field)
   else if (commandName === 'infraction' && interaction.guildId === MAIN_GUILD_ID) {
     const targetUser = interaction.options.getUser('user');
     const reason = interaction.options.getString('reason');
@@ -132,7 +139,8 @@ client.on('interactionCreate', async interaction => {
         .addFields(
           { name: '👤 Penalized User', value: `${targetUser} (${targetUser.tag})`, inline: false },
           { name: '📝 Reason', value: reason, inline: false },
-          { name: '🛡️ Issued By', value: `${interaction.user}`, inline: false }
+          { name: '🛡️ Issued By', value: `${interaction.user}`, inline: false },
+          { name: '💬 Infraction Discussion', value: 'Discussion for this infraction is open below.', inline: false }
         )
         .setTimestamp()
         .setFooter({ text: 'Western Plains Management System' });
