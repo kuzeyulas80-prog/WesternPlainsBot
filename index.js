@@ -5,7 +5,7 @@ const MAIN_GUILD_ID = '1420370540899864631';     // Main Server ID
 const PROMO_CHANNEL_ID = '1420459904602341426';  // Promote logs channel ID
 const INFRACTION_CHANNEL_ID = '1420460148194939093'; // Infraction logs channel ID
 const SESSION_CHANNEL_ID = '1511508334040191046';// Manage session target channel ID
-const CLIENT_ID = '1535592914858541066';          // Bot Client ID
+const CLIENT_ID = '153559291485854106';          // Bot Client ID
 
 // Rol İsimleri
 const PROMO_ROLE_NAME = 'Promotion Permission';
@@ -19,7 +19,7 @@ const client = new Client({
   ]
 });
 
-// Aktif oylamaları hafızada tutmak için harita (Map)
+// Aktif oylamaları ve host bilgilerini hafızada tutmak için harita (Map)
 const activeSessions = new Map();
 
 // --- Command Definitions (Main Server Only) ---
@@ -84,7 +84,7 @@ client.on('interactionCreate', async interaction => {
       await interaction.reply({ content: 'Message sent successfully as an embed!', ephemeral: true });
     } 
 
-    // 2. PROMOTE COMMAND (Fixed Timeout & Role Protected)
+    // 2. PROMOTE COMMAND
     else if (commandName === 'promote' && interaction.guildId === MAIN_GUILD_ID) {
       await interaction.deferReply({ ephemeral: true });
 
@@ -118,7 +118,7 @@ client.on('interactionCreate', async interaction => {
       }
     } 
 
-    // 3. INFRACTION COMMAND (Fixed Timeout & Role Protected)
+    // 3. INFRACTION COMMAND
     else if (commandName === 'infraction' && interaction.guildId === MAIN_GUILD_ID) {
       await interaction.deferReply({ ephemeral: true });
 
@@ -203,8 +203,9 @@ client.on('interactionCreate', async interaction => {
     }
   } 
 
-  // BUTTON INTERACTION (Vote System)
+  // BUTTON INTERACTIONS
   else if (interaction.isButton()) {
+    // VOTE BUTTON
     if (interaction.customId === 'vote_session_btn') {
       const session = activeSessions.get(interaction.message.id);
 
@@ -222,6 +223,7 @@ client.on('interactionCreate', async interaction => {
       await interaction.reply({ content: '✅ Your vote has been casted!', ephemeral: true });
 
       if (currentVotes >= session.votesNeeded) {
+        const hostUser = session.host; // Host bilgisini saklıyoruz
         activeSessions.delete(interaction.message.id);
 
         const disabledRow = new ActionRowBuilder().addComponents(
@@ -235,24 +237,52 @@ client.on('interactionCreate', async interaction => {
         await interaction.message.edit({ components: [disabledRow] });
 
         const voterMentions = session.voters.map(id => `<@${id}>`).join(' ');
-        const pingContent = `${session.host} ${voterMentions}`;
+        const pingContent = `${hostUser} ${voterMentions}`;
 
         const startEmbed = new EmbedBuilder()
           .setColor(0x00FF00)
           .setTitle('🚀 SESSION START POLL')
-          .setDescription('The required number of votes has been reached! The session is starting now.')
+          .setDescription('The required number of votes has been reached! Click the button below to start the session.')
           .addFields(
-            { name: '🪐 Hosted By', value: `${session.host}`, inline: false },
+            { name: '🪐 Hosted By', value: `${hostUser}`, inline: false },
             { name: '👥 Participants', value: voterMentions || 'None', inline: false }
           )
           .setTimestamp()
           .setFooter({ text: 'Western Plains Management System' });
 
-        await interaction.channel.send({ content: pingContent, embeds: [startEmbed] });
+        const startRow = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId(`start_session_btn_${hostUser.id}`) // Host ID'sini butona bağlıyoruz
+            .setLabel('Start Session')
+            .setStyle(ButtonStyle.Primary)
+        );
+
+        await interaction.channel.send({ content: pingContent, embeds: [startEmbed], components: [startRow] });
       } else {
         session.embed.fields[1].value = `${currentVotes} / ${session.votesNeeded}`;
         await interaction.message.edit({ embeds: [session.embed] });
       }
+    } 
+    
+    // START SESSION BUTTON (Only Host Restricted)
+    else if (interaction.customId.startsWith('start_session_btn_')) {
+      const hostId = interaction.customId.split('_')[3];
+
+      // Sadece komutu kullanan kişi (host) basabilir kontrolü
+      if (interaction.user.id !== hostId) {
+        return await interaction.reply({ content: '❌ Only the user who started this session can click this button!', ephemeral: true });
+      }
+
+      const disabledStartRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('start_session_btn_disabled')
+          .setLabel('Session Started')
+          .setStyle(ButtonStyle.Success)
+          .setDisabled(true)
+      );
+
+      await interaction.update({ components: [disabledStartRow] });
+      await interaction.channel.send({ content: '@everyone 🚀 **The session is starting right now!**' });
     }
   }
 });
