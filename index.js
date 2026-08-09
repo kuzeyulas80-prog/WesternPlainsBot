@@ -101,7 +101,7 @@ client.on('interactionCreate', async interaction => {
     await interaction.reply({ content: 'Message sent successfully as an embed!', ephemeral: true });
   } 
 
-  // 2. PROMOTE COMMAND (Fixed with deferReply to prevent timeout)
+  // 2. PROMOTE COMMAND (Without Image)
   else if (commandName === 'promote' && interaction.guildId === MAIN_GUILD_ID) {
     await interaction.deferReply({ ephemeral: true });
 
@@ -111,13 +111,12 @@ client.on('interactionCreate', async interaction => {
     if (promoChannel) {
       const embed = new EmbedBuilder()
         .setColor(0x00FF00)
-        .setTitle('🎉 OFFICIAL PROMOTION ANNOUNCEMENT')
-        .setDescription('Congratulations on your new rank! Keep up the outstanding work within our community.')
+        .setTitle('🎉 New Promotion Awarded')
+        .setDescription('A new promotion has been successfully processed.')
         .addFields(
           { name: '👤 Promoted User', value: `${targetUser} (${targetUser.tag})`, inline: false },
           { name: '🛡️ Authorized By', value: `${interaction.user}`, inline: false }
         )
-        .setImage('BURAYA_GORSELIN_LINKINI_YAZ') // Görsel bağlantısını buraya ekleyebilirsin
         .setTimestamp()
         .setFooter({ text: 'Western Plains Management System' });
 
