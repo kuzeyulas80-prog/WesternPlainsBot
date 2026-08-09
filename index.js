@@ -101,7 +101,7 @@ client.on('interactionCreate', async interaction => {
     await interaction.reply({ content: 'Message sent successfully as an embed!', ephemeral: true });
   } 
 
-  // 2. PROMOTE COMMAND (Main Server Only)
+  // 2. PROMOTE COMMAND (Main Server Only - Large Embed with Image)
   else if (commandName === 'promote' && interaction.guildId === MAIN_GUILD_ID) {
     const targetUser = interaction.options.getUser('user');
     const promoChannel = interaction.guild.channels.cache.get(PROMO_CHANNEL_ID);
@@ -109,12 +109,13 @@ client.on('interactionCreate', async interaction => {
     if (promoChannel) {
       const embed = new EmbedBuilder()
         .setColor(0x00FF00)
-        .setTitle('🎉 New Promotion Awarded')
-        .setDescription('A new promotion has been successfully processed.')
+        .setTitle('🎉 OFFICIAL PROMOTION ANNOUNCEMENT')
+        .setDescription('Congratulations on your new rank! Keep up the outstanding work within our community.')
         .addFields(
           { name: '👤 Promoted User', value: `${targetUser} (${targetUser.tag})`, inline: false },
           { name: '🛡️ Authorized By', value: `${interaction.user}`, inline: false }
         )
+        .setImage('BURAYA_GORSELIN_LINKINI_YAZ') // Discord'a yüklediğin görselin bağlantısını buraya ekleyebilirsin
         .setTimestamp()
         .setFooter({ text: 'Western Plains Management System' });
 
@@ -125,7 +126,7 @@ client.on('interactionCreate', async interaction => {
     }
   } 
 
-  // 3. INFRACTION COMMAND (Main Server Only - Opens a thread automatically under the embed)
+  // 3. INFRACTION COMMAND (Main Server Only - With Thread)
   else if (commandName === 'infraction' && interaction.guildId === MAIN_GUILD_ID) {
     const targetUser = interaction.options.getUser('user');
     const reason = interaction.options.getString('reason');
@@ -144,13 +145,11 @@ client.on('interactionCreate', async interaction => {
         .setTimestamp()
         .setFooter({ text: 'Western Plains Management System' });
 
-      // Send the embed message and capture it
       const sentMessage = await infractionChannel.send({ embeds: [embed] });
 
-      // Automatically create a thread (Alt Başlık) under the sent message
       await sentMessage.startThread({
         name: `Infraction Discussion - ${targetUser.username}`,
-        autoArchiveDuration: 1440, // Automatically archives after 24 hours of inactivity
+        autoArchiveDuration: 1440,
         reason: 'Infraction discussion thread created automatically.'
       });
 
