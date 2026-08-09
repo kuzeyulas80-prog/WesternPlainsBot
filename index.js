@@ -21,6 +21,10 @@ const INFRACTION_CHANNEL_ID = '1420460148194939093'; // Infraction logs channel 
 const CASE_CHANNEL_ID = '1535617388689756301';   // Case logs channel ID (Department Server)
 const CLIENT_ID = '153559291485854106';          // Bot Client ID
 
+// Discord'daki tam rol isimleri
+const PROMO_ROLE_NAME = 'Promotion Permission';
+const INFRACTION_ROLE_NAME = 'Infractions Permission';
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -104,8 +108,12 @@ client.on('interactionCreate', async interaction => {
     await interaction.reply({ content: 'Message sent successfully as an embed!', ephemeral: true });
   } 
 
-  // 2. PROMOTE COMMAND (Main Server Only)
+  // 2. PROMOTE COMMAND (Main Server Only - Role Protected)
   else if (commandName === 'promote' && interaction.guildId === MAIN_GUILD_ID) {
+    if (!interaction.member.roles.cache.some(role => role.name.toLowerCase() === PROMO_ROLE_NAME.toLowerCase())) {
+      return await interaction.reply({ content: '❌ You do not have the required **Promotion Permission** role to use this command.', ephemeral: true });
+    }
+
     await interaction.deferReply({ ephemeral: true });
 
     const targetUser = interaction.options.getUser('user');
@@ -115,7 +123,7 @@ client.on('interactionCreate', async interaction => {
 
     if (promoChannel) {
       const embed = new EmbedBuilder()
-        .setColor(0x00FF00) // Yeşil tema
+        .setColor(0x00FF00)
         .setTitle('❌🎉 Western Plains Promotion')
         .setDescription(`Dear ${targetUser},\n\nCongratulations, the Management Team has decided to promote you! Your dedication, professionalism, and commitment to excellence have truly set you apart—keep up the outstanding work as you take on this new role.\n\n`)
         .addFields(
@@ -127,7 +135,6 @@ client.on('interactionCreate', async interaction => {
         .setTimestamp()
         .setFooter({ text: 'Western Plains Management System' });
 
-      // Embed dışında kullanıcıyı pinglemek için content kısmına kullanıcı yazıyoruz
       await promoChannel.send({ content: `${targetUser}`, embeds: [embed] });
       await interaction.editReply({ content: 'Promotion logged successfully.' });
     } else {
@@ -135,8 +142,12 @@ client.on('interactionCreate', async interaction => {
     }
   } 
 
-  // 3. INFRACTION COMMAND (Main Server Only)
+  // 3. INFRACTION COMMAND (Main Server Only - Role Protected)
   else if (commandName === 'infraction' && interaction.guildId === MAIN_GUILD_ID) {
+    if (!interaction.member.roles.cache.some(role => role.name.toLowerCase() === INFRACTION_ROLE_NAME.toLowerCase())) {
+      return await interaction.reply({ content: '❌ You do not have the required **Infractions Permission** role to use this command.', ephemeral: true });
+    }
+
     await interaction.deferReply({ ephemeral: true });
 
     const targetUser = interaction.options.getUser('user');
@@ -146,7 +157,7 @@ client.on('interactionCreate', async interaction => {
 
     if (infractionChannel) {
       const embed = new EmbedBuilder()
-        .setColor(0xFF0000) // Kırmızı tema
+        .setColor(0xFF0000)
         .setTitle('❌ Western Plains Infraction')
         .setDescription(`Dear ${targetUser},\n\nThe Internal Affairs team has carefully reviewed your recent actions and decided to issue a **${infractionType}**. This decision was made based on the provided evidence of your recent actions.\n\n`)
         .addFields(
@@ -158,10 +169,8 @@ client.on('interactionCreate', async interaction => {
         .setTimestamp()
         .setFooter({ text: 'Western Plains Management System' });
 
-      // Embed dışında kullanıcıyı pingleyerek gönderiyoruz
       const sentMessage = await infractionChannel.send({ content: `${targetUser}`, embeds: [embed] });
 
-      // Alt başlık (Thread) açma
       await sentMessage.startThread({
         name: `Western Plains Infraction Discussion - ${targetUser.username}`,
         autoArchiveDuration: 1440,
