@@ -1,17 +1,4 @@
-const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const express = require('express');
-
-// --- Web Server (For Render & UptimeRobot) ---
-const app = express();
-const port = process.env.PORT || 3000;
-
-app.get('/', (req, res) => {
-  res.send('Bot is active!');
-});
-
-app.listen(port, () => {
-  console.log(`Web server is running on port ${port}.`);
-});
+const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 // --- IDs and Configuration ---
 const MAIN_GUILD_ID = '1420370540899864631';     // Main Server ID
@@ -19,9 +6,10 @@ const DEPT_GUILD_ID = '1511021349034786999';     // Department Server ID
 const PROMO_CHANNEL_ID = '1420459904602341426';  // Promote logs channel ID
 const INFRACTION_CHANNEL_ID = '1420460148194939093'; // Infraction logs channel ID
 const CASE_CHANNEL_ID = '1535617388689756301';   // Case logs channel ID (Department Server)
+const SESSION_CHANNEL_ID = '1511508334040191046';// Manage session target channel ID
 const CLIENT_ID = '153559291485854106';          // Bot Client ID
 
-// Discord'daki tam rol isimleri
+// Rol İsimleri
 const PROMO_ROLE_NAME = 'Promotion Permission';
 const INFRACTION_ROLE_NAME = 'Infractions Permission';
 
@@ -32,6 +20,9 @@ const client = new Client({
     GatewayIntentBits.MessageContent
   ]
 });
+
+// Aktif oylamaları hafızada tutmak için harita (Map)
+const activeSessions = new Map();
 
 // --- Command Definitions ---
 const mainGuildCommands = [
@@ -47,6 +38,10 @@ const mainGuildCommands = [
     .addUserOption(option => option.setName('user').setDescription('The user to penalize').setRequired(true))
     .addStringOption(option => option.setName('type').setDescription('Type or level of punishment').setRequired(true))
     .addStringOption(option => option.setName('reason').setDescription('The reason for infraction').setRequired(true)),
+  new SlashCommandBuilder()
+    .setName('manage-session')
+    .setDescription('Manages a session voting process.')
+    .addIntegerOption(option => option.setName('votes-needed').setDescription('Number of votes needed to start').setRequired(true)),
   new SlashCommandBuilder()
     .setName('say')
     .setDescription('Broadcasts a message.')
@@ -90,122 +85,225 @@ client.once('ready', async () => {
 
 // --- Interaction Handler ---
 client.on('interactionCreate', async interaction => {
-  if (!interaction.isChatInputCommand()) return;
+  if (interaction.isChatInputCommand()) {
+    const { commandName } = interaction;
 
-  const { commandName } = interaction;
+    // 1. SAY COMMAND
+    if (commandName === 'say') {
+      const messageContent = interaction.options.getString('message');
+      
+      const embed = new EmbedBuilder()
+        .setColor(0x5865F2)
+        .setDescription(messageContent)
+        .setTimestamp()
+        .setFooter({ text: `Sent by ${interaction.user.tag}` });
 
-  // 1. SAY COMMAND
-  if (commandName === 'say') {
-    const messageContent = interaction.options.getString('message');
-    
-    const embed = new EmbedBuilder()
-      .setColor(0x5865F2)
-      .setDescription(messageContent)
-      .setTimestamp()
-      .setFooter({ text: `Sent by ${interaction.user.tag}` });
+      await interaction.channel.send({ embeds: [embed] });
+      await interaction.reply({ content: 'Message sent successfully as an embed!', ephemeral: true });
+    } 
 
-    await interaction.channel.send({ embeds: [embed] });
-    await interaction.reply({ content: 'Message sent successfully as an embed!', ephemeral: true });
-  } 
+    // 2. PROMOTE COMMAND (Main Server Only - Role Protected)
+    else if (commandName === 'promote' && interaction.guildId === MAIN_GUILD_ID) {
+      if (!interaction.member.roles.cache.some(role => role.name.toLowerCase() === PROMO_ROLE_NAME.toLowerCase())) {
+        return await interaction.reply({ content: '❌ You do not have the required **Promotion Permission** role to use this command.', ephemeral: true });
+      }
 
-  // 2. PROMOTE COMMAND (Main Server Only - Role Protected)
-  else if (commandName === 'promote' && interaction.guildId === MAIN_GUILD_ID) {
-    if (!interaction.member.roles.cache.some(role => role.name.toLowerCase() === PROMO_ROLE_NAME.toLowerCase())) {
-      return await interaction.reply({ content: '❌ You do not have the required **Promotion Permission** role to use this command.', ephemeral: true });
+      await interaction.deferReply({ ephemeral: true });
+
+      const targetUser = interaction.options.getUser('user');
+      const newRank = interaction.options.getString('rank');
+      const reason = interaction.options.getString('reason') || 'No reason provided';
+      const promoChannel = interaction.guild.channels.cache.get(PROMO_CHANNEL_ID);
+
+      if (promoChannel) {
+        const embed = new EmbedBuilder()
+          .setColor(0x00FF00)
+          .setTitle('❌🎉 Western Plains Promotion')
+          .setDescription(`Dear ${targetUser},\n\nCongratulations, the Management Team has decided to promote you! Your dedication, professionalism, and commitment to excellence have truly set you apart—keep up the outstanding work as you take on this new role.\n\n`)
+          .addFields(
+            { name: '👤 User Promoted', value: `${targetUser}`, inline: true },
+            { name: '⭐ New Role', value: newRank, inline: true },
+            { name: 'ℹ️ Reason(s)', value: reason, inline: false },
+            { name: '🪐 Staff Issuer', value: `${interaction.user}`, inline: false }
+          )
+          .setTimestamp()
+          .setFooter({ text: 'Western Plains Management System' });
+
+        await promoChannel.send({ content: `${targetUser}`, embeds: [embed] });
+        await interaction.editReply({ content: 'Promotion logged successfully.' });
+      } else {
+        await interaction.editReply({ content: 'Error: Promotion channel not found!' });
+      }
+    } 
+
+    // 3. INFRACTION COMMAND (Main Server Only - Role Protected)
+    else if (commandName === 'infraction' && interaction.guildId === MAIN_GUILD_ID) {
+      if (!interaction.member.roles.cache.some(role => role.name.toLowerCase() === INFRACTION_ROLE_NAME.toLowerCase())) {
+        return await interaction.reply({ content: '❌ You do not have the required **Infractions Permission** role to use this command.', ephemeral: true });
+      }
+
+      await interaction.deferReply({ ephemeral: true });
+
+      const targetUser = interaction.options.getUser('user');
+      const infractionType = interaction.options.getString('type');
+      const reason = interaction.options.getString('reason');
+      const infractionChannel = interaction.guild.channels.cache.get(INFRACTION_CHANNEL_ID);
+
+      if (infractionChannel) {
+        const embed = new EmbedBuilder()
+          .setColor(0xFF0000)
+          .setTitle('❌ Western Plains Infraction')
+          .setDescription(`Dear ${targetUser},\n\nThe Internal Affairs team has carefully reviewed your recent actions and decided to issue a **${infractionType}**. This decision was made based on the provided evidence of your recent actions.\n\n`)
+          .addFields(
+            { name: '👤 User Infracted', value: `${targetUser}`, inline: true },
+            { name: '⚡ Punishment', value: infractionType, inline: true },
+            { name: 'ℹ️ Reason(s)', value: reason, inline: false },
+            { name: '🪐 Staff Issuer', value: `${interaction.user}`, inline: false }
+          )
+          .setTimestamp()
+          .setFooter({ text: 'Western Plains Management System' });
+
+        const sentMessage = await infractionChannel.send({ content: `${targetUser}`, embeds: [embed] });
+
+        await sentMessage.startThread({
+          name: `Western Plains Infraction Discussion - ${targetUser.username}`,
+          autoArchiveDuration: 1440,
+          reason: 'Infraction discussion thread created automatically.'
+        });
+
+        await interaction.editReply({ content: 'Infraction logged and discussion thread opened successfully.' });
+      } else {
+        await interaction.editReply({ content: 'Error: Infraction channel not found!' });
+      }
     }
 
-    await interaction.deferReply({ ephemeral: true });
+    // 4. MANAGE-SESSION COMMAND
+    else if (commandName === 'manage-session' && interaction.guildId === MAIN_GUILD_ID) {
+      await interaction.deferReply({ ephemeral: true });
 
-    const targetUser = interaction.options.getUser('user');
-    const newRank = interaction.options.getString('rank');
-    const reason = interaction.options.getString('reason') || 'No reason provided';
-    const promoChannel = interaction.guild.channels.cache.get(PROMO_CHANNEL_ID);
+      const votesNeeded = interaction.options.getInteger('votes-needed');
+      const sessionChannel = interaction.guild.channels.cache.get(SESSION_CHANNEL_ID);
 
-    if (promoChannel) {
+      if (!sessionChannel) {
+        return await interaction.editReply({ content: 'Error: Target session channel not found!' });
+      }
+
       const embed = new EmbedBuilder()
-        .setColor(0x00FF00)
-        .setTitle('❌🎉 Western Plains Promotion')
-        .setDescription(`Dear ${targetUser},\n\nCongratulations, the Management Team has decided to promote you! Your dedication, professionalism, and commitment to excellence have truly set you apart—keep up the outstanding work as you take on this new role.\n\n`)
+        .setColor(0xFFA500)
+        .setTitle('📊 Western Plains Session Vote')
+        .setDescription('A session is about to start! Click the button below to cast your vote.')
         .addFields(
-          { name: '👤 User Promoted', value: `${targetUser}`, inline: true },
-          { name: '⭐ New Role', value: newRank, inline: true },
-          { name: 'ℹ️ Reason(s)', value: reason, inline: false },
-          { name: '🪐 Staff Issuer', value: `${interaction.user}`, inline: false }
+          { name: '🎯 Votes Required', value: `${votesNeeded}`, inline: true },
+          { name: '🗳️ Current Votes', value: `0 / ${votesNeeded}`, inline: true },
+          { name: '🪐 Host By', value: `${interaction.user}`, inline: false }
         )
         .setTimestamp()
         .setFooter({ text: 'Western Plains Management System' });
 
-      await promoChannel.send({ content: `${targetUser}`, embeds: [embed] });
-      await interaction.editReply({ content: 'Promotion logged successfully.' });
-    } else {
-      await interaction.editReply({ content: 'Error: Promotion channel not found!' });
-    }
-  } 
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('vote_session_btn')
+          .setLabel('Vote')
+          .setStyle(ButtonStyle.Success)
+      );
 
-  // 3. INFRACTION COMMAND (Main Server Only - Role Protected)
-  else if (commandName === 'infraction' && interaction.guildId === MAIN_GUILD_ID) {
-    if (!interaction.member.roles.cache.some(role => role.name.toLowerCase() === INFRACTION_ROLE_NAME.toLowerCase())) {
-      return await interaction.reply({ content: '❌ You do not have the required **Infractions Permission** role to use this command.', ephemeral: true });
-    }
+      const sentMessage = await sessionChannel.send({ embeds: [embed], components: [row] });
 
-    await interaction.deferReply({ ephemeral: true });
-
-    const targetUser = interaction.options.getUser('user');
-    const infractionType = interaction.options.getString('type');
-    const reason = interaction.options.getString('reason');
-    const infractionChannel = interaction.guild.channels.cache.get(INFRACTION_CHANNEL_ID);
-
-    if (infractionChannel) {
-      const embed = new EmbedBuilder()
-        .setColor(0xFF0000)
-        .setTitle('❌ Western Plains Infraction')
-        .setDescription(`Dear ${targetUser},\n\nThe Internal Affairs team has carefully reviewed your recent actions and decided to issue a **${infractionType}**. This decision was made based on the provided evidence of your recent actions.\n\n`)
-        .addFields(
-          { name: '👤 User Infracted', value: `${targetUser}`, inline: true },
-          { name: '⚡ Punishment', value: infractionType, inline: true },
-          { name: 'ℹ️ Reason(s)', value: reason, inline: false },
-          { name: '🪐 Staff Issuer', value: `${interaction.user}`, inline: false }
-        )
-        .setTimestamp()
-        .setFooter({ text: 'Western Plains Management System' });
-
-      const sentMessage = await infractionChannel.send({ content: `${targetUser}`, embeds: [embed] });
-
-      await sentMessage.startThread({
-        name: `Western Plains Infraction Discussion - ${targetUser.username}`,
-        autoArchiveDuration: 1440,
-        reason: 'Infraction discussion thread created automatically.'
+      // Oylama verilerini hafızaya kaydediyoruz
+      activeSessions.set(sentMessage.id, {
+        host: interaction.user,
+        votesNeeded: votesNeeded,
+        voters: [],
+        embed: embed,
+        row: row
       });
 
-      await interaction.editReply({ content: 'Infraction logged and discussion thread opened successfully.' });
-    } else {
-      await interaction.editReply({ content: 'Error: Infraction channel not found!' });
+      await interaction.editReply({ content: 'Session voting has been successfully created in the designated channel.' });
+    }
+
+    // 5. CASE COMMAND (Department Server Only)
+    else if (commandName === 'case' && interaction.guildId === DEPT_GUILD_ID) {
+      await interaction.deferReply({ ephemeral: true });
+
+      const detail = interaction.options.getString('detail');
+      const caseChannel = interaction.guild.channels.cache.get(CASE_CHANNEL_ID);
+
+      if (caseChannel) {
+        const embed = new EmbedBuilder()
+          .setColor(0x0099FF)
+          .setTitle('📋 Department Case File')
+          .setDescription('A new case file has been opened.')
+          .addFields(
+            { name: '📂 Case Details', value: detail, inline: false },
+            { name: '👤 Opened By', value: `${interaction.user}`, inline: false }
+          )
+          .setTimestamp()
+          .setFooter({ text: 'Western Plains Department System' });
+
+        await caseChannel.send({ embeds: [embed] });
+        await interaction.editReply({ content: 'Case file created and logged successfully.' });
+      } else {
+        await interaction.editReply({ content: 'Error: Case channel not found in this server!' });
+      }
     }
   } 
 
-  // 4. CASE COMMAND (Department Server Only)
-  else if (commandName === 'case' && interaction.guildId === DEPT_GUILD_ID) {
-    await interaction.deferReply({ ephemeral: true });
+  // BUTTON INTERACTION (Vote System)
+  else if (interaction.isButton()) {
+    if (interaction.customId === 'vote_session_btn') {
+      const session = activeSessions.get(interaction.message.id);
 
-    const detail = interaction.options.getString('detail');
-    const caseChannel = interaction.guild.channels.cache.get(CASE_CHANNEL_ID);
+      if (!session) {
+        return await interaction.reply({ content: '❌ This voting session has expired or is invalid.', ephemeral: true });
+      }
 
-    if (caseChannel) {
-      const embed = new EmbedBuilder()
-        .setColor(0x0099FF)
-        .setTitle('📋 Department Case File')
-        .setDescription('A new case file has been opened.')
-        .addFields(
-          { name: '📂 Case Details', value: detail, inline: false },
-          { name: '👤 Opened By', value: `${interaction.user}`, inline: false }
-        )
-        .setTimestamp()
-        .setFooter({ text: 'Western Plains Department System' });
+      // Kullanıcı daha önce oy vermiş mi kontrol et
+      if (session.voters.includes(interaction.user.id)) {
+        return await interaction.reply({ content: '❌ You have already cast your vote!', ephemeral: true });
+      }
 
-      await caseChannel.send({ embeds: [embed] });
-      await interaction.editReply({ content: 'Case file created and logged successfully.' });
-    } else {
-      await interaction.editReply({ content: 'Error: Case channel not found in this server!' });
+      // Oyu kaydet
+      session.voters.push(interaction.user.id);
+      const currentVotes = session.voters.length;
+
+      await interaction.reply({ content: '✅ Your vote has been casted!', ephemeral: true });
+
+      // Oylama tamamlandı mı kontrol et
+      if (currentVotes >= session.votesNeeded) {
+        activeSessions.delete(interaction.message.id);
+
+        // Butonları devre dışı bırak
+        const disabledRow = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId('vote_session_btn')
+            .setLabel('Voting Closed')
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(true)
+        );
+
+        await interaction.message.edit({ components: [disabledRow] });
+
+        // Ping listesini oluştur (Host + Oy Verenler)
+        const voterMentions = session.voters.map(id => `<@${id}>`).join(' ');
+        const pingContent = `${session.host} ${voterMentions}`;
+
+        const startEmbed = new EmbedBuilder()
+          .setColor(0x00FF00)
+          .setTitle('🚀 SESSION START POLL')
+          .setDescription('The required number of votes has been reached! The session is starting now.')
+          .addFields(
+            { name: '🪐 Hosted By', value: `${session.host}`, inline: false },
+            { name: '👥 Participants', value: voterMentions || 'None', inline: false }
+          )
+          .setTimestamp()
+          .setFooter({ text: 'Western Plains Management System' });
+
+        await interaction.channel.send({ content: pingContent, embeds: [startEmbed] });
+      } else {
+        // Embeddeki oy sayısını güncelle
+        session.embed.fields[1].value = `${currentVotes} / ${session.votesNeeded}`;
+        await interaction.message.edit({ embeds: [session.embed] });
+      }
     }
   }
 });
