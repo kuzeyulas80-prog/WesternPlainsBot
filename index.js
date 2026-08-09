@@ -20,7 +20,6 @@ const PROMO_CHANNEL_ID = '1420459904602341426';  // Promote logs channel ID
 const INFRACTION_CHANNEL_ID = '1420460148194939093'; // Infraction logs channel ID
 const CASE_CHANNEL_ID = '1535617388689756301';   // Case logs channel ID (Department Server)
 const CLIENT_ID = '153559291485854106';          // Bot Client ID
-const TOKEN = 'SENIN_BOT_TOKENIN';                 // Bot Token
 
 const client = new Client({
   intents: [
@@ -58,7 +57,7 @@ const deptGuildCommands = [
     .addStringOption(option => option.setName('message').setDescription('The message to send').setRequired(true))
 ].map(command => command.toJSON());
 
-const rest = new REST({ version: '10' }).setToken(TOKEN);
+const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
 client.once('ready', async () => {
   console.log(`Logged in as ${client.user.tag}!`);
@@ -102,10 +101,15 @@ client.on('interactionCreate', async interaction => {
 
     if (promoChannel) {
       const embed = new EmbedBuilder()
-        .setColor(0x00FF00) // Yeşil renk
-        .setTitle('🎉 New Promotion')
-        .setDescription(`Congratulations ${targetUser}, you have been promoted!`)
-        .setTimestamp();
+        .setColor(0x00FF00)
+        .setTitle('🎉 New Promotion Awarded')
+        .setDescription('A new promotion has been successfully processed.')
+        .addFields(
+          { name: '👤 Promoted User', value: `${targetUser} (${targetUser.tag})`, inline: false },
+          { name: '🛡️ Authorized By', value: `${interaction.user}`, inline: false }
+        )
+        .setTimestamp()
+        .setFooter({ text: 'Western Plains Management System' });
 
       await promoChannel.send({ embeds: [embed] });
       await interaction.reply({ content: 'Promotion logged successfully.', ephemeral: true });
@@ -122,13 +126,16 @@ client.on('interactionCreate', async interaction => {
 
     if (infractionChannel) {
       const embed = new EmbedBuilder()
-        .setColor(0xFF0000) // Kırmızı renk
-        .setTitle('⚠️ Infraction Issued')
+        .setColor(0xFF0000)
+        .setTitle('⚠️ Official Infraction Issued')
+        .setDescription('An infraction record has been created.')
         .addFields(
-          { name: 'User', value: `${targetUser}`, inline: true },
-          { name: 'Reason', value: reason, inline: true }
+          { name: '👤 Penalized User', value: `${targetUser} (${targetUser.tag})`, inline: false },
+          { name: '📝 Reason', value: reason, inline: false },
+          { name: '🛡️ Issued By', value: `${interaction.user}`, inline: false }
         )
-        .setTimestamp();
+        .setTimestamp()
+        .setFooter({ text: 'Western Plains Management System' });
 
       await infractionChannel.send({ embeds: [embed] });
       await interaction.reply({ content: 'Infraction logged successfully.', ephemeral: true });
@@ -144,18 +151,20 @@ client.on('interactionCreate', async interaction => {
 
     if (caseChannel) {
       const embed = new EmbedBuilder()
-        .setColor(0x0099FF) // Mavi renk
-        .setTitle('📋 New Case File')
+        .setColor(0x0099FF)
+        .setTitle('📋 Department Case File')
+        .setDescription('A new case file has been opened.')
         .addFields(
-          { name: 'Author', value: `${interaction.user}`, inline: true },
-          { name: 'Details', value: detail, inline: false }
+          { name: '📂 Case Details', value: detail, inline: false },
+          { name: '👤 Opened By', value: `${interaction.user}`, inline: false }
         )
-        .setTimestamp();
+        .setTimestamp()
+        .setFooter({ text: 'Western Plains Department System' });
 
       await caseChannel.send({ embeds: [embed] });
       await interaction.reply({ content: 'Case file created and logged successfully.', ephemeral: true });
     } else {
-      await interaction.reply({ content: 'Error: Case channel not found!', ephemeral: true });
+      await interaction.reply({ content: 'Error: Case channel not found in this server!', ephemeral: true });
     }
   }
 });
