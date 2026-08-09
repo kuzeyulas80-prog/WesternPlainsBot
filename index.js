@@ -125,7 +125,7 @@ client.on('interactionCreate', async interaction => {
     }
   } 
 
-  // 3. INFRACTION COMMAND (Main Server Only - With Infraction Discussion field)
+  // 3. INFRACTION COMMAND (Main Server Only - Opens a thread automatically under the embed)
   else if (commandName === 'infraction' && interaction.guildId === MAIN_GUILD_ID) {
     const targetUser = interaction.options.getUser('user');
     const reason = interaction.options.getString('reason');
@@ -139,14 +139,22 @@ client.on('interactionCreate', async interaction => {
         .addFields(
           { name: '👤 Penalized User', value: `${targetUser} (${targetUser.tag})`, inline: false },
           { name: '📝 Reason', value: reason, inline: false },
-          { name: '🛡️ Issued By', value: `${interaction.user}`, inline: false },
-          { name: '💬 Infraction Discussion', value: 'Discussion for this infraction is open below.', inline: false }
+          { name: '🛡️ Issued By', value: `${interaction.user}`, inline: false }
         )
         .setTimestamp()
         .setFooter({ text: 'Western Plains Management System' });
 
-      await infractionChannel.send({ embeds: [embed] });
-      await interaction.reply({ content: 'Infraction logged successfully.', ephemeral: true });
+      // Send the embed message and capture it
+      const sentMessage = await infractionChannel.send({ embeds: [embed] });
+
+      // Automatically create a thread (Alt Başlık) under the sent message
+      await sentMessage.startThread({
+        name: `Infraction Discussion - ${targetUser.username}`,
+        autoArchiveDuration: 1440, // Automatically archives after 24 hours of inactivity
+        reason: 'Infraction discussion thread created automatically.'
+      });
+
+      await interaction.reply({ content: 'Infraction logged and discussion thread opened successfully.', ephemeral: true });
     } else {
       await interaction.reply({ content: 'Error: Infraction channel not found!', ephemeral: true });
     }
