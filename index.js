@@ -34,11 +34,14 @@ const mainGuildCommands = [
   new SlashCommandBuilder()
     .setName('promote')
     .setDescription('Promotes a user.')
-    .addUserOption(option => option.setName('user').setDescription('The user to promote').setRequired(true)),
+    .addUserOption(option => option.setName('user').setDescription('The user to promote').setRequired(true))
+    .addStringOption(option => option.setName('rank').setDescription('The new rank').setRequired(true))
+    .addStringOption(option => option.setName('reason').setDescription('Reason for promotion').setRequired(false)),
   new SlashCommandBuilder()
     .setName('infraction')
     .setDescription('Issues an infraction to a user.')
     .addUserOption(option => option.setName('user').setDescription('The user to penalize').setRequired(true))
+    .addStringOption(option => option.setName('type').setDescription('Type or level of infraction').setRequired(true))
     .addStringOption(option => option.setName('reason').setDescription('The reason for infraction').setRequired(true)),
   new SlashCommandBuilder()
     .setName('say')
@@ -101,11 +104,13 @@ client.on('interactionCreate', async interaction => {
     await interaction.reply({ content: 'Message sent successfully as an embed!', ephemeral: true });
   } 
 
-  // 2. PROMOTE COMMAND (Without Image)
+  // 2. PROMOTE COMMAND (Main Server Only - Includes New Rank & Reason)
   else if (commandName === 'promote' && interaction.guildId === MAIN_GUILD_ID) {
     await interaction.deferReply({ ephemeral: true });
 
     const targetUser = interaction.options.getUser('user');
+    const newRank = interaction.options.getString('rank');
+    const reason = interaction.options.getString('reason') || 'No reason provided';
     const promoChannel = interaction.guild.channels.cache.get(PROMO_CHANNEL_ID);
 
     if (promoChannel) {
@@ -115,6 +120,8 @@ client.on('interactionCreate', async interaction => {
         .setDescription('A new promotion has been successfully processed.')
         .addFields(
           { name: '👤 Promoted User', value: `${targetUser} (${targetUser.tag})`, inline: false },
+          { name: '⭐ New Rank', value: newRank, inline: false },
+          { name: '📝 Reason', value: reason, inline: false },
           { name: '🛡️ Authorized By', value: `${interaction.user}`, inline: false }
         )
         .setTimestamp()
@@ -127,11 +134,12 @@ client.on('interactionCreate', async interaction => {
     }
   } 
 
-  // 3. INFRACTION COMMAND
+  // 3. INFRACTION COMMAND (Main Server Only - Includes Infraction Type & Thread)
   else if (commandName === 'infraction' && interaction.guildId === MAIN_GUILD_ID) {
     await interaction.deferReply({ ephemeral: true });
 
     const targetUser = interaction.options.getUser('user');
+    const infractionType = interaction.options.getString('type');
     const reason = interaction.options.getString('reason');
     const infractionChannel = interaction.guild.channels.cache.get(INFRACTION_CHANNEL_ID);
 
@@ -142,6 +150,7 @@ client.on('interactionCreate', async interaction => {
         .setDescription('An infraction record has been created.')
         .addFields(
           { name: '👤 Penalized User', value: `${targetUser} (${targetUser.tag})`, inline: false },
+          { name: '⚖️ Infraction Type', value: infractionType, inline: false },
           { name: '📝 Reason', value: reason, inline: false },
           { name: '🛡️ Issued By', value: `${interaction.user}`, inline: false }
         )
@@ -162,7 +171,7 @@ client.on('interactionCreate', async interaction => {
     }
   } 
 
-  // 4. CASE COMMAND
+  // 4. CASE COMMAND (Department Server Only)
   else if (commandName === 'case' && interaction.guildId === DEPT_GUILD_ID) {
     await interaction.deferReply({ ephemeral: true });
 
