@@ -5,7 +5,7 @@ const MAIN_GUILD_ID = '1420370540899864631';     // Main Server ID
 const PROMO_CHANNEL_ID = '1420459904602341426';  // Promote logs channel ID
 const INFRACTION_CHANNEL_ID = '1420460148194939093'; // Infraction logs channel ID
 const SESSION_CHANNEL_ID = '1511508334040191046';// Manage session target channel ID
-const CLIENT_ID = '1535592914858541066';          // Bot Client ID
+const CLIENT_ID = '153559291485854106';          // Bot Client ID
 
 // Rol İsimleri
 const PROMO_ROLE_NAME = 'Promotion Permission';
@@ -84,13 +84,13 @@ client.on('interactionCreate', async interaction => {
       await interaction.reply({ content: 'Message sent successfully as an embed!', ephemeral: true });
     } 
 
-    // 2. PROMOTE COMMAND (Role Protected)
+    // 2. PROMOTE COMMAND (Fixed Timeout & Role Protected)
     else if (commandName === 'promote' && interaction.guildId === MAIN_GUILD_ID) {
-      if (!interaction.member.roles.cache.some(role => role.name.toLowerCase() === PROMO_ROLE_NAME.toLowerCase())) {
-        return await interaction.reply({ content: '❌ You do not have the required **Promotion Permission** role to use this command.', ephemeral: true });
-      }
-
       await interaction.deferReply({ ephemeral: true });
+
+      if (!interaction.member.roles.cache.some(role => role.name.toLowerCase() === PROMO_ROLE_NAME.toLowerCase())) {
+        return await interaction.editReply({ content: '❌ You do not have the required **Promotion Permission** role to use this command.' });
+      }
 
       const targetUser = interaction.options.getUser('user');
       const newRank = interaction.options.getString('rank');
@@ -118,13 +118,13 @@ client.on('interactionCreate', async interaction => {
       }
     } 
 
-    // 3. INFRACTION COMMAND (Role Protected)
+    // 3. INFRACTION COMMAND (Fixed Timeout & Role Protected)
     else if (commandName === 'infraction' && interaction.guildId === MAIN_GUILD_ID) {
-      if (!interaction.member.roles.cache.some(role => role.name.toLowerCase() === INFRACTION_ROLE_NAME.toLowerCase())) {
-        return await interaction.reply({ content: '❌ You do not have the required **Infractions Permission** role to use this command.', ephemeral: true });
-      }
-
       await interaction.deferReply({ ephemeral: true });
+
+      if (!interaction.member.roles.cache.some(role => role.name.toLowerCase() === INFRACTION_ROLE_NAME.toLowerCase())) {
+        return await interaction.editReply({ content: '❌ You do not have the required **Infractions Permission** role to use this command.' });
+      }
 
       const targetUser = interaction.options.getUser('user');
       const infractionType = interaction.options.getString('type');
