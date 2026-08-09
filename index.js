@@ -1,11 +1,9 @@
 const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
-// --- IDs and Configuration ---
+// --- IDs and Configuration (Main Server Only) ---
 const MAIN_GUILD_ID = '1420370540899864631';     // Main Server ID
-const DEPT_GUILD_ID = '1511021349034786999';     // Department Server ID
 const PROMO_CHANNEL_ID = '1420459904602341426';  // Promote logs channel ID
 const INFRACTION_CHANNEL_ID = '1420460148194939093'; // Infraction logs channel ID
-const CASE_CHANNEL_ID = '1535617388689756301';   // Case logs channel ID (Department Server)
 const SESSION_CHANNEL_ID = '1511508334040191046';// Manage session target channel ID
 const CLIENT_ID = '153559291485854106';          // Bot Client ID
 
@@ -24,7 +22,7 @@ const client = new Client({
 // Aktif oylamaları hafızada tutmak için harita (Map)
 const activeSessions = new Map();
 
-// --- Command Definitions ---
+// --- Command Definitions (Main Server Only) ---
 const mainGuildCommands = [
   new SlashCommandBuilder()
     .setName('promote')
@@ -48,36 +46,20 @@ const mainGuildCommands = [
     .addStringOption(option => option.setName('message').setDescription('The message to send').setRequired(true))
 ].map(command => command.toJSON());
 
-const deptGuildCommands = [
-  new SlashCommandBuilder()
-    .setName('case')
-    .setDescription('Manages case files.')
-    .addStringOption(option => option.setName('detail').setDescription('Case details').setRequired(true)),
-  new SlashCommandBuilder()
-    .setName('say')
-    .setDescription('Broadcasts a message.')
-    .addStringOption(option => option.setName('message').setDescription('The message to send').setRequired(true))
-].map(command => command.toJSON());
-
 const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
 client.once('ready', async () => {
   console.log(`Logged in as ${client.user.tag}!`);
 
   try {
-    console.log('Registering commands to servers...');
+    console.log('Registering commands to main server...');
 
     await rest.put(
       Routes.applicationGuildCommands(CLIENT_ID, MAIN_GUILD_ID),
       { body: mainGuildCommands },
     );
 
-    await rest.put(
-      Routes.applicationGuildCommands(CLIENT_ID, DEPT_GUILD_ID),
-      { body: deptGuildCommands },
-    );
-
-    console.log('Commands successfully distributed to servers!');
+    console.log('Commands successfully registered!');
   } catch (error) {
     console.error(error);
   }
@@ -102,7 +84,7 @@ client.on('interactionCreate', async interaction => {
       await interaction.reply({ content: 'Message sent successfully as an embed!', ephemeral: true });
     } 
 
-    // 2. PROMOTE COMMAND (Main Server Only - Role Protected)
+    // 2. PROMOTE COMMAND (Role Protected)
     else if (commandName === 'promote' && interaction.guildId === MAIN_GUILD_ID) {
       if (!interaction.member.roles.cache.some(role => role.name.toLowerCase() === PROMO_ROLE_NAME.toLowerCase())) {
         return await interaction.reply({ content: '❌ You do not have the required **Promotion Permission** role to use this command.', ephemeral: true });
@@ -136,7 +118,7 @@ client.on('interactionCreate', async interaction => {
       }
     } 
 
-    // 3. INFRACTION COMMAND (Main Server Only - Role Protected)
+    // 3. INFRACTION COMMAND (Role Protected)
     else if (commandName === 'infraction' && interaction.guildId === MAIN_GUILD_ID) {
       if (!interaction.member.roles.cache.some(role => role.name.toLowerCase() === INFRACTION_ROLE_NAME.toLowerCase())) {
         return await interaction.reply({ content: '❌ You do not have the required **Infractions Permission** role to use this command.', ephemeral: true });
@@ -209,7 +191,6 @@ client.on('interactionCreate', async interaction => {
 
       const sentMessage = await sessionChannel.send({ embeds: [embed], components: [row] });
 
-      // Oylama verilerini hafızaya kaydediyoruz
       activeSessions.set(sentMessage.id, {
         host: interaction.user,
         votesNeeded: votesNeeded,
@@ -219,32 +200,6 @@ client.on('interactionCreate', async interaction => {
       });
 
       await interaction.editReply({ content: 'Session voting has been successfully created in the designated channel.' });
-    }
-
-    // 5. CASE COMMAND (Department Server Only)
-    else if (commandName === 'case' && interaction.guildId === DEPT_GUILD_ID) {
-      await interaction.deferReply({ ephemeral: true });
-
-      const detail = interaction.options.getString('detail');
-      const caseChannel = interaction.guild.channels.cache.get(CASE_CHANNEL_ID);
-
-      if (caseChannel) {
-        const embed = new EmbedBuilder()
-          .setColor(0x0099FF)
-          .setTitle('📋 Department Case File')
-          .setDescription('A new case file has been opened.')
-          .addFields(
-            { name: '📂 Case Details', value: detail, inline: false },
-            { name: '👤 Opened By', value: `${interaction.user}`, inline: false }
-          )
-          .setTimestamp()
-          .setFooter({ text: 'Western Plains Department System' });
-
-        await caseChannel.send({ embeds: [embed] });
-        await interaction.editReply({ content: 'Case file created and logged successfully.' });
-      } else {
-        await interaction.editReply({ content: 'Error: Case channel not found in this server!' });
-      }
     }
   } 
 
@@ -257,22 +212,18 @@ client.on('interactionCreate', async interaction => {
         return await interaction.reply({ content: '❌ This voting session has expired or is invalid.', ephemeral: true });
       }
 
-      // Kullanıcı daha önce oy vermiş mi kontrol et
       if (session.voters.includes(interaction.user.id)) {
         return await interaction.reply({ content: '❌ You have already cast your vote!', ephemeral: true });
       }
 
-      // Oyu kaydet
       session.voters.push(interaction.user.id);
       const currentVotes = session.voters.length;
 
       await interaction.reply({ content: '✅ Your vote has been casted!', ephemeral: true });
 
-      // Oylama tamamlandı mı kontrol et
       if (currentVotes >= session.votesNeeded) {
         activeSessions.delete(interaction.message.id);
 
-        // Butonları devre dışı bırak
         const disabledRow = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
             .setCustomId('vote_session_btn')
@@ -283,7 +234,6 @@ client.on('interactionCreate', async interaction => {
 
         await interaction.message.edit({ components: [disabledRow] });
 
-        // Ping listesini oluştur (Host + Oy Verenler)
         const voterMentions = session.voters.map(id => `<@${id}>`).join(' ');
         const pingContent = `${session.host} ${voterMentions}`;
 
@@ -300,7 +250,6 @@ client.on('interactionCreate', async interaction => {
 
         await interaction.channel.send({ content: pingContent, embeds: [startEmbed] });
       } else {
-        // Embeddeki oy sayısını güncelle
         session.embed.fields[1].value = `${currentVotes} / ${session.votesNeeded}`;
         await interaction.message.edit({ embeds: [session.embed] });
       }
