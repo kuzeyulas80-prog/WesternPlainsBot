@@ -1,7 +1,6 @@
 const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const express = require('express');
 
-// --- Mini Web Server ---
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -20,13 +19,12 @@ const INFRACTION_CHANNEL_ID = '1420460148194939093'; // Infraction logs channel 
 const SESSION_CHANNEL_ID = '1511508334040191046';// Manage session target channel ID
 const CLIENT_ID = '1535592914858541066';         // Bot Client ID
 
-// Rol İsimleri
+// WP | Session Ping Rolünün ID'si
+const SESSION_ROLE_ID = '1536126498749026364';
+
 const PROMO_ROLE_NAME = 'Promotion Permission';
 const INFRACTION_ROLE_NAME = 'Infractions Permission';
 const SESSION_ROLE_NAME = 'WP | Session Ping';
-
-// Oturum Oylaması İçin Banner Görseli
-const BANNER_IMAGE_URL = 'https://media.discordapp.net/attachments/1420459904602341426/1536126498749026364/image_29.png';
 
 const client = new Client({
   intents: [
@@ -38,7 +36,6 @@ const client = new Client({
 
 const activeSessions = new Map();
 
-// --- Command Definitions (Main Server Only) ---
 const mainGuildCommands = [
   new SlashCommandBuilder()
     .setName('promote')
@@ -79,7 +76,6 @@ client.once('ready', async () => {
   }
 });
 
-// --- Interaction Handler ---
 client.on('interactionCreate', async interaction => {
   try {
     if (interaction.isChatInputCommand()) {
@@ -176,8 +172,7 @@ client.on('interactionCreate', async interaction => {
           return await interaction.editReply({ content: 'Error: Target session channel not found!' });
         }
 
-        const sessionRole = interaction.guild.roles.cache.find(role => role.name.toLowerCase() === SESSION_ROLE_NAME.toLowerCase());
-        const rolePing = sessionRole ? `<@&${sessionRole.id}>` : '';
+        let rolePing = SESSION_ROLE_ID ? `<@&${SESSION_ROLE_ID}>` : '';
 
         const embed = new EmbedBuilder()
           .setColor(0xFFA500)
@@ -188,7 +183,6 @@ client.on('interactionCreate', async interaction => {
             { name: '🗳️ Current Votes', value: `0 / ${votesNeeded}`, inline: true },
             { name: '🪐 Host By', value: `${interaction.user}`, inline: false }
           )
-          .setImage(BANNER_IMAGE_URL)
           .setTimestamp()
           .setFooter({ text: 'Western Plains Management System' });
 
@@ -203,7 +197,7 @@ client.on('interactionCreate', async interaction => {
           content: rolePing, 
           embeds: [embed], 
           components: [row],
-          allowedMentions: { roles: sessionRole ? [sessionRole.id] : [] }
+          allowedMentions: { roles: SESSION_ROLE_ID ? [SESSION_ROLE_ID] : [] }
         });
 
         activeSessions.set(sentMessage.id, {
@@ -246,18 +240,10 @@ client.on('interactionCreate', async interaction => {
               .setDisabled(true)
           );
 
-          const updatedEmbed = EmbedBuilder.from(session.embed)
-            .setFields(
-              { name: '🎯 Votes Required', value: `${session.votesNeeded}`, inline: true },
-              { name: '🗳️ Current Votes', value: `${currentVotes} / ${session.votesNeeded}`, inline: true },
-              { name: '🪐 Host By', value: `${session.host}`, inline: false }
-            );
+          await interaction.message.edit({ components: [disabledRow] });
 
-          await interaction.message.edit({ embeds: [updatedEmbed], components: [disabledRow] });
-
-          const sessionRole = interaction.guild.roles.cache.find(role => role.name.toLowerCase() === SESSION_ROLE_NAME.toLowerCase());
           const voterMentions = session.voters.map(id => `<@${id}>`).join(' ');
-          const pingContent = `${sessionRole ? `<@&${sessionRole.id}>` : '@everyone'} | Voters: ${voterMentions}`;
+          const pingContent = `${hostUser} ${voterMentions}`;
 
           const startEmbed = new EmbedBuilder()
             .setColor(0x00FF00)
@@ -279,13 +265,8 @@ client.on('interactionCreate', async interaction => {
 
           await interaction.channel.send({ content: pingContent, embeds: [startEmbed], components: [startRow] });
         } else {
-          const updatedEmbed = EmbedBuilder.from(session.embed)
-            .setFields(
-              { name: '🎯 Votes Required', value: `${session.votesNeeded}`, inline: true },
-              { name: '🗳️ Current Votes', value: `${currentVotes} / ${session.votesNeeded}`, inline: true },
-              { name: '🪐 Host By', value: `${session.host}`, inline: false }
-            );
-          await interaction.message.edit({ embeds: [updatedEmbed] });
+          session.embed.data.fields[1].value = `${currentVotes} / ${session.votesNeeded}`;
+          await interaction.message.edit({ embeds: [session.embed] });
         }
       } 
       else if (interaction.customId.startsWith('start_session_btn_')) {
