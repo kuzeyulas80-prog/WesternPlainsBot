@@ -25,7 +25,7 @@ const PROMO_ROLE_NAME = 'Promotion Permission';
 const INFRACTION_ROLE_NAME = 'Infractions Permission';
 const SESSION_ROLE_NAME = 'WP | Session Ping';
 
-// Görseller
+// Oturum Oylaması İçin Banner Görseli
 const BANNER_IMAGE_URL = 'https://media.discordapp.net/attachments/1420459904602341426/1536126498749026364/image_29.png';
 
 const client = new Client({
@@ -182,6 +182,7 @@ client.on('interactionCreate', async interaction => {
         const embed = new EmbedBuilder()
           .setColor(0xFFA500)
           .setTitle('📊 Western Plains Session Vote')
+          .setDescription('A session is about to start! Click the button below to cast your vote.')
           .addFields(
             { name: '🎯 Votes Required', value: `${votesNeeded}`, inline: true },
             { name: '🗳️ Current Votes', value: `0 / ${votesNeeded}`, inline: true },
@@ -256,19 +257,16 @@ client.on('interactionCreate', async interaction => {
 
           const sessionRole = interaction.guild.roles.cache.find(role => role.name.toLowerCase() === SESSION_ROLE_NAME.toLowerCase());
           const voterMentions = session.voters.map(id => `<@${id}>`).join(' ');
-          const voterTags = session.voters.map(id => `<@${id}>`).join(', ') || 'None';
-          const pingContent = `${sessionRole ? `<@&${sessionRole.id}>` : '@everyone'} | Voters: ${voterTags}`;
+          const pingContent = `${sessionRole ? `<@&${sessionRole.id}>` : '@everyone'} | Voters: ${voterMentions}`;
 
           const startEmbed = new EmbedBuilder()
             .setColor(0x00FF00)
-            .setImage(BANNER_IMAGE_URL)
-            .setDescription(`The **Western Plains Management** team has decided to host a session! All voters are **required** to join, we hope you have fun at our session!\n\n**🌐 Server Information**\n\n` +
-              `**Servername:** Western Plains RP | Realistic\n` +
-              `**Server Code:** westernplains\n` +
-              `**Server Membercount:** ${session.voters.length + 1}/50\n` +
-              `**Current Queue:** 0\n\n` +
-              `🪐 **Hosted By:** ${hostUser}\n` +
-              `👥 **Voters / Participants:** ${voterMentions}`)
+            .setTitle('🚀 SESSION START POLL')
+            .setDescription('The required number of votes has been reached! Click the button below to start the session.')
+            .addFields(
+              { name: '🪐 Hosted By', value: `${hostUser}`, inline: false },
+              { name: '👥 Participants', value: voterMentions || 'None', inline: false }
+            )
             .setTimestamp()
             .setFooter({ text: 'Western Plains Management System' });
 
