@@ -27,7 +27,7 @@ const PROMO_ROLE_NAME = 'Promotion Permission';
 const INFRACTION_ROLE_NAME = 'Infractions Permission';
 const SESSION_ROLE_NAME = 'WP | Session Ping';
 
-// Oturum Banner Görseli (Yeni gönderdiğin görselin URL'si)
+// Oturum Banner Görseli
 const BANNER_IMAGE_URL = 'https://cdn.discordapp.com/attachments/1510413522033709137/1536312234060546148/Ekran_goruntusu_2026-08-10_105421.png?ex=6a7af1c3&is=6a79a043&hm=0ae48afd5f6e1008aeaf3fa1f4347c310bcd885f90b08334cd4f2304f365a4eb&';
 
 const client = new Client({
@@ -182,6 +182,7 @@ client.on('interactionCreate', async interaction => {
 
         let rolePing = SESSION_ROLE_ID ? `<@&${SESSION_ROLE_ID}>` : '';
 
+        // Görselin tam ve büyük durması için alanları daha derli toplu tutuyoruz
         const embed = new EmbedBuilder()
           .setColor(0xFFA500)
           .setTitle('📊 Western Plains Session Vote')
