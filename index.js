@@ -18,14 +18,14 @@ const MAIN_GUILD_ID = '1420370540899864631';     // Main Server ID
 const PROMO_CHANNEL_ID = '1420459904602341426';  // Promote logs channel ID
 const INFRACTION_CHANNEL_ID = '1420460148194939093'; // Infraction logs channel ID
 const SESSION_CHANNEL_ID = '1511508334040191046';// Manage session target channel ID
-const CLIENT_ID = '1535592914858541066';         // Doğru Bot Client ID
+const CLIENT_ID = '1535592914858541066';         // Bot Client ID
 
 // Rol İsimleri
 const PROMO_ROLE_NAME = 'Promotion Permission';
 const INFRACTION_ROLE_NAME = 'Infractions Permission';
 const SESSION_ROLE_NAME = 'WP | Session Ping';
 
-// Oturum Oylaması İçin Banner Görseli
+// Görseller
 const BANNER_IMAGE_URL = 'https://media.discordapp.net/attachments/1420459904602341426/1536126498749026364/image_29.png';
 
 const client = new Client({
@@ -254,17 +254,21 @@ client.on('interactionCreate', async interaction => {
 
           await interaction.message.edit({ embeds: [updatedEmbed], components: [disabledRow] });
 
+          const sessionRole = interaction.guild.roles.cache.find(role => role.name.toLowerCase() === SESSION_ROLE_NAME.toLowerCase());
           const voterMentions = session.voters.map(id => `<@${id}>`).join(' ');
-          const pingContent = `${hostUser} ${voterMentions}`;
+          const voterTags = session.voters.map(id => `<@${id}>`).join(', ') || 'None';
+          const pingContent = `${sessionRole ? `<@&${sessionRole.id}>` : '@everyone'} | Voters: ${voterTags}`;
 
           const startEmbed = new EmbedBuilder()
             .setColor(0x00FF00)
-            .setTitle('🚀 SESSION START POLL')
-            .setDescription('The required number of votes has been reached! Click the button below to start the session.')
-            .addFields(
-              { name: '🪐 Hosted By', value: `${hostUser}`, inline: false },
-              { name: '👥 Participants', value: voterMentions || 'None', inline: false }
-            )
+            .setImage(BANNER_IMAGE_URL)
+            .setDescription(`The **Western Plains Management** team has decided to host a session! All voters are **required** to join, we hope you have fun at our session!\n\n**🌐 Server Information**\n\n` +
+              `**Servername:** Western Plains RP | Realistic\n` +
+              `**Server Code:** westernplains\n` +
+              `**Server Membercount:** ${session.voters.length + 1}/50\n` +
+              `**Current Queue:** 0\n\n` +
+              `🪐 **Hosted By:** ${hostUser}\n` +
+              `👥 **Voters / Participants:** ${voterMentions}`)
             .setTimestamp()
             .setFooter({ text: 'Western Plains Management System' });
 
