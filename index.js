@@ -5,11 +5,12 @@ const MAIN_GUILD_ID = '1420370540899864631';     // Main Server ID
 const PROMO_CHANNEL_ID = '1420459904602341426';  // Promote logs channel ID
 const INFRACTION_CHANNEL_ID = '1420460148194939093'; // Infraction logs channel ID
 const SESSION_CHANNEL_ID = '1511508334040191046';// Manage session target channel ID
-const CLIENT_ID = '1535592914858541066';          // Bot Client ID
+const CLIENT_ID = '153559291485854106';          // Bot Client ID
 
 // Rol İsimleri
 const PROMO_ROLE_NAME = 'Promotion Permission';
 const INFRACTION_ROLE_NAME = 'Infractions Permission';
+const SESSION_ROLE_NAME = 'WP | Session Ping'; // Oylama başladığında etiketlenecek rol
 
 const client = new Client({
   intents: [
@@ -170,6 +171,10 @@ client.on('interactionCreate', async interaction => {
         return await interaction.editReply({ content: 'Error: Target session channel not found!' });
       }
 
+      // Sunucudan 'WP | Session Ping' rolünü buluyoruz
+      const sessionRole = interaction.guild.roles.cache.find(role => role.name.toLowerCase() === SESSION_ROLE_NAME.toLowerCase());
+      const rolePingContent = sessionRole ? `${sessionRole}` : '';
+
       const embed = new EmbedBuilder()
         .setColor(0xFFA500)
         .setTitle('📊 Western Plains Session Vote')
@@ -189,7 +194,8 @@ client.on('interactionCreate', async interaction => {
           .setStyle(ButtonStyle.Success)
       );
 
-      const sentMessage = await sessionChannel.send({ embeds: [embed], components: [row] });
+      // Mesaj atılırken rolü etiketliyoruz (@everyone yerine)
+      const sentMessage = await sessionChannel.send({ content: rolePingContent, embeds: [embed], components: [row] });
 
       activeSessions.set(sentMessage.id, {
         host: interaction.user,
@@ -223,7 +229,7 @@ client.on('interactionCreate', async interaction => {
       await interaction.reply({ content: '✅ Your vote has been casted!', ephemeral: true });
 
       if (currentVotes >= session.votesNeeded) {
-        const hostUser = session.host; // Host bilgisini saklıyoruz
+        const hostUser = session.host;
         activeSessions.delete(interaction.message.id);
 
         const disabledRow = new ActionRowBuilder().addComponents(
@@ -252,7 +258,7 @@ client.on('interactionCreate', async interaction => {
 
         const startRow = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
-            .setCustomId(`start_session_btn_${hostUser.id}`) // Host ID'sini butona bağlıyoruz
+            .setCustomId(`start_session_btn_${hostUser.id}`)
             .setLabel('Start Session')
             .setStyle(ButtonStyle.Primary)
         );
@@ -264,11 +270,10 @@ client.on('interactionCreate', async interaction => {
       }
     } 
     
-    // START SESSION BUTTON (Only Host Restricted)
+    // START SESSION BUTTON (Only Host Restricted, No Everyone Ping)
     else if (interaction.customId.startsWith('start_session_btn_')) {
       const hostId = interaction.customId.split('_')[3];
 
-      // Sadece komutu kullanan kişi (host) basabilir kontrolü
       if (interaction.user.id !== hostId) {
         return await interaction.reply({ content: '❌ Only the user who started this session can click this button!', ephemeral: true });
       }
@@ -282,7 +287,7 @@ client.on('interactionCreate', async interaction => {
       );
 
       await interaction.update({ components: [disabledStartRow] });
-      await interaction.channel.send({ content: '@everyone 🚀 **The session is starting right now!**' });
+      await interaction.channel.send({ content: `🚀 **The session hosted by <@${hostId}> is starting right now!**` });
     }
   }
 });
