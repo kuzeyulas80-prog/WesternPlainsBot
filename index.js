@@ -27,6 +27,9 @@ const PROMO_ROLE_NAME = 'Promotion Permission';
 const INFRACTION_ROLE_NAME = 'Infractions Permission';
 const SESSION_ROLE_NAME = 'WP | Session Ping';
 
+// Oturum Banner Görseli (Yeni gönderdiğin görselin URL'si)
+const BANNER_IMAGE_URL = 'https://cdn.discordapp.com/attachments/1510413522033709137/1536312234060546148/Ekran_goruntusu_2026-08-10_105421.png?ex=6a7af1c3&is=6a79a043&hm=0ae48afd5f6e1008aeaf3fa1f4347c310bcd885f90b08334cd4f2304f365a4eb&';
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -188,6 +191,7 @@ client.on('interactionCreate', async interaction => {
             { name: '🗳️ Current Votes', value: `0 / ${votesNeeded}`, inline: true },
             { name: '🪐 Host By', value: `${interaction.user}`, inline: false }
           )
+          .setImage(BANNER_IMAGE_URL)
           .setTimestamp()
           .setFooter({ text: 'Western Plains Management System' });
 
@@ -254,6 +258,7 @@ client.on('interactionCreate', async interaction => {
             .setColor(0x00FF00)
             .setTitle('🚀 SESSION START POLL')
             .setDescription('The required number of votes has been reached! Click the button below to start the session.')
+            .setImage(BANNER_IMAGE_URL)
             .addFields(
               { name: '🌐 Server Code', value: 'WPRPS', inline: false },
               { name: '🪐 Hosted By', value: `${hostUser}`, inline: false },
