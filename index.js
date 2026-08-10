@@ -248,7 +248,6 @@ client.on('interactionCreate', async interaction => {
           await interaction.message.edit({ components: [disabledRow] });
 
           const voterMentions = session.voters.map(id => `<@${id}>`).join(' ');
-          // Burada everyone yerine sadece host ve oy verenler etiketlenir
           const pingContent = `${hostUser} ${voterMentions}`;
 
           const startEmbed = new EmbedBuilder()
@@ -256,6 +255,7 @@ client.on('interactionCreate', async interaction => {
             .setTitle('🚀 SESSION START POLL')
             .setDescription('The required number of votes has been reached! Click the button below to start the session.')
             .addFields(
+              { name: '🌐 Server Code', value: 'WPRPS', inline: false },
               { name: '🪐 Hosted By', value: `${hostUser}`, inline: false },
               { name: '👥 Participants', value: voterMentions || 'None', inline: false }
             )
