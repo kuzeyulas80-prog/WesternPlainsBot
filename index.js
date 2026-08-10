@@ -182,17 +182,17 @@ client.on('interactionCreate', async interaction => {
 
         let rolePing = SESSION_ROLE_ID ? `<@&${SESSION_ROLE_ID}>` : '';
 
-        // Görselin tam ve büyük durması için alanları daha derli toplu tutuyoruz
+        // İlk oylama embedi (Büyük banner üstte)
         const embed = new EmbedBuilder()
           .setColor(0xFFA500)
           .setTitle('📊 Western Plains Session Vote')
           .setDescription('A session is about to start! Click the button below to cast your vote.')
+          .setImage(BANNER_IMAGE_URL)
           .addFields(
             { name: '🎯 Votes Required', value: `${votesNeeded}`, inline: true },
             { name: '🗳️ Current Votes', value: `0 / ${votesNeeded}`, inline: true },
             { name: '🪐 Host By', value: `${interaction.user}`, inline: false }
           )
-          .setImage(BANNER_IMAGE_URL)
           .setTimestamp()
           .setFooter({ text: 'Western Plains Management System' });
 
@@ -243,7 +243,7 @@ client.on('interactionCreate', async interaction => {
           activeSessions.delete(interaction.message.id);
 
           const disabledRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
+            newButton = new ButtonBuilder()
               .setCustomId('vote_session_btn')
               .setLabel('Voting Closed')
               .setStyle(ButtonStyle.Secondary)
@@ -255,15 +255,17 @@ client.on('interactionCreate', async interaction => {
           const voterMentions = session.voters.map(id => `<@${id}>`).join(' ');
           const pingContent = `${hostUser} ${voterMentions}`;
 
+          // Oturum başladığında atılacak olan High Rock tarzı büyük banner'lı embed
           const startEmbed = new EmbedBuilder()
             .setColor(0x00FF00)
-            .setTitle('🚀 SESSION START POLL')
-            .setDescription('The required number of votes has been reached! Click the button below to start the session.')
             .setImage(BANNER_IMAGE_URL)
-            .addFields(
-              { name: '🌐 Server Code', value: 'WPRPS', inline: false },
-              { name: '🪐 Hosted By', value: `${hostUser}`, inline: false },
-              { name: '👥 Participants', value: voterMentions || 'None', inline: false }
+            .setDescription(
+              `The **Western Plains Management** team has decided to host a session! All voters are **required** to join, we hope you have fun at our session!\n\n` +
+              `🌐 **Server Information**\n\n` +
+              `• **Server Name:** Western Plains RP | Realistic\n` +
+              `• **Server Code:** WPRPS\n` +
+              `• **Hosted By:** ${hostUser}\n` +
+              `• **Participants:** ${voterMentions || 'None'}`
             )
             .setTimestamp()
             .setFooter({ text: 'Western Plains Management System' });
