@@ -5,7 +5,7 @@ const MAIN_GUILD_ID = '1420370540899864631';     // Main Server ID
 const PROMO_CHANNEL_ID = '1420459904602341426';  // Promote logs channel ID
 const INFRACTION_CHANNEL_ID = '1420460148194939093'; // Infraction logs channel ID
 const SESSION_CHANNEL_ID = '1511508334040191046';// Manage session target channel ID
-const CLIENT_ID = '1535592914858541066';          // Bot Client ID
+const CLIENT_ID = '153559291485854106';          // Bot Client ID
 
 // Rol İsimleri
 const PROMO_ROLE_NAME = 'Promotion Permission';
@@ -161,7 +161,7 @@ client.on('interactionCreate', async interaction => {
         }
 
         const sessionRole = interaction.guild.roles.cache.find(role => role.name.toLowerCase() === SESSION_ROLE_NAME.toLowerCase());
-        const rolePingContent = sessionRole ? `${sessionRole}` : '';
+        const rolePing = sessionRole ? `<@&${sessionRole.id}>` : '';
 
         const embed = new EmbedBuilder()
           .setColor(0xFFA500)
@@ -182,7 +182,13 @@ client.on('interactionCreate', async interaction => {
             .setStyle(ButtonStyle.Success)
         );
 
-        const sentMessage = await sessionChannel.send({ content: rolePingContent, embeds: [embed], components: [row] });
+        // Rolün kesin olarak pinglenmesi için allowedMentions eklendi
+        const sentMessage = await sessionChannel.send({ 
+          content: rolePing, 
+          embeds: [embed], 
+          components: [row],
+          allowedMentions: { roles: sessionRole ? [sessionRole.id] : [] }
+        });
 
         activeSessions.set(sentMessage.id, {
           host: interaction.user,
