@@ -1,11 +1,24 @@
 const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const express = require('express');
+
+// --- Mini Web Server (Render loglarını susturmak için) ---
+const app = express();
+const port = process.env.PORT || 3000;
+
+app.get('/', (req, res) => {
+  res.send('Bot is active!');
+});
+
+app.listen(port, () => {
+  console.log(`Web server is running on port ${port}.`);
+});
 
 // --- IDs and Configuration (Main Server Only) ---
 const MAIN_GUILD_ID = '1420370540899864631';     // Main Server ID
 const PROMO_CHANNEL_ID = '1420459904602341426';  // Promote logs channel ID
 const INFRACTION_CHANNEL_ID = '1420460148194939093'; // Infraction logs channel ID
 const SESSION_CHANNEL_ID = '1511508334040191046';// Manage session target channel ID
-const CLIENT_ID = '1535592914858541066';          // Bot Client ID
+const CLIENT_ID = '1535592914858541066';         // Bot Client ID
 
 // Rol İsimleri
 const PROMO_ROLE_NAME = 'Promotion Permission';
@@ -182,7 +195,6 @@ client.on('interactionCreate', async interaction => {
             .setStyle(ButtonStyle.Success)
         );
 
-        // Rolün kesin olarak pinglenmesi için allowedMentions eklendi
         const sentMessage = await sessionChannel.send({ 
           content: rolePing, 
           embeds: [embed], 
