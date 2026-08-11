@@ -19,7 +19,7 @@ const CLIENT_ID = '1535592914858541066';              // Bot Client ID
 
 // Channels
 const PROMO_CHANNEL_ID = '1420459904602341426';       // Promote logs channel ID
-const INFRACTION_CHANNEL_ID = '1420460148194939093';  // Infraction logs channel ID
+const INFRACTION_CHANNEL_ID = '1420460148194939093'; // Infraction logs channel ID
 const SESSION_CHANNEL_ID = '1511508334040191046';     // Manage session target channel ID
 const CASE_CHANNEL_ID = '1535617388689756301';        // Department Case target channel ID
 
@@ -120,7 +120,7 @@ client.on('interactionCreate', async interaction => {
             const embed = new EmbedBuilder()
               .setColor(0xE74C3C)
               .setTitle('📁 Department Case Log')
-              .setDescription(`A official case file has been opened regarding ${targetUser}.\n\n`)
+              .setDescription(`An official case file has been opened regarding ${targetUser}.\n\n`)
               .addFields(
                 { name: '👤 Target User', value: `${targetUser}`, inline: true },
                 { name: 'ℹ️ Reason / Details', value: reason, inline: false },
