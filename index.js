@@ -12,22 +12,25 @@ app.listen(port, () => {
   console.log(`Web server is running on port ${port}.`);
 });
 
-// --- IDs and Configuration (Main Server Only) ---
-const MAIN_GUILD_ID = '1420370540899864631';     // Main Server ID
-const PROMO_CHANNEL_ID = '1420459904602341426';  // Promote logs channel ID
-const INFRACTION_CHANNEL_ID = '1420460148194939093'; // Infraction logs channel ID
-const SESSION_CHANNEL_ID = '1511508334040191046';// Manage session target channel ID
-const CLIENT_ID = '1535592914858541066';         // Bot Client ID
+// --- IDs and Configuration ---
+const MAIN_GUILD_ID = '1420370540899864631';          // Main Server ID
+const DEPARTMENT_GUILD_ID = '1511021349034786999';    // Department Server ID
+const CLIENT_ID = '1535592914858541066';              // Bot Client ID
 
-// Rol ID'leri ve İsimleri
-const SESSION_ROLE_ID = '1536126498749026364'; // WP | Session Ping
-const MANAGE_SESSION_ROLE_ID = '1517532669150363859'; // manage-session komutunu kullanabilecek rol
+// Channels
+const PROMO_CHANNEL_ID = '1420459904602341426';       // Promote logs channel ID
+const INFRACTION_CHANNEL_ID = '1420460148194939093';  // Infraction logs channel ID
+const SESSION_CHANNEL_ID = '1511508334040191046';     // Manage session target channel ID
+const CASE_CHANNEL_ID = '1535617388689756301';        // Department Case target channel ID
 
+// Roles
+const SESSION_ROLE_ID = '1536126498749026364';        // WP | Session Ping
+const MANAGE_SESSION_ROLE_ID = '1517532669150363859';// manage-session komutunu kullanabilecek rol
 const PROMO_ROLE_NAME = 'Promotion Permission';
 const INFRACTION_ROLE_NAME = 'Infractions Permission';
 const SESSION_ROLE_NAME = 'WP | Session Ping';
 
-// Oturum Banner Görseli
+// Images
 const BANNER_IMAGE_URL = 'https://cdn.discordapp.com/attachments/1510413522033709137/1536312234060546148/Ekran_goruntusu_2026-08-10_105421.png?ex=6a7af1c3&is=6a79a043&hm=0ae48afd5f6e1008aeaf3fa1f4347c310bcd885f90b08334cd4f2304f365a4eb&';
 
 const client = new Client({
@@ -40,6 +43,7 @@ const client = new Client({
 
 const activeSessions = new Map();
 
+// --- Main Server Commands ---
 const mainGuildCommands = [
   new SlashCommandBuilder()
     .setName('promote')
@@ -63,162 +67,220 @@ const mainGuildCommands = [
     .addStringOption(option => option.setName('message').setDescription('The message to send').setRequired(true))
 ].map(command => command.toJSON());
 
+// --- Department Server Commands ---
+const departmentGuildCommands = [
+  new SlashCommandBuilder()
+    .setName('case')
+    .setDescription('Opens a case log for a user.')
+    .addUserOption(option => option.setName('user').setDescription('The target user for the case').setRequired(true))
+    .addStringOption(option => option.setName('reason').setDescription('The reason for opening the case').setRequired(true))
+].map(command => command.toJSON());
+
 const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
 client.once('ready', async () => {
   console.log(`Logged in as ${client.user.tag}!`);
 
   try {
-    console.log('Registering commands to main server...');
+    console.log('Registering commands to Main Server...');
     await rest.put(
       Routes.applicationGuildCommands(CLIENT_ID, MAIN_GUILD_ID),
       { body: mainGuildCommands },
     );
-    console.log('Commands successfully registered!');
+
+    console.log('Registering commands to Department Server...');
+    await rest.put(
+      Routes.applicationGuildCommands(CLIENT_ID, DEPARTMENT_GUILD_ID),
+      { body: departmentGuildCommands },
+    );
+
+    console.log('All commands registered successfully!');
   } catch (error) {
-    console.error(error);
+    console.error('Command Registration Error:', error);
   }
 });
 
 client.on('interactionCreate', async interaction => {
   try {
     if (interaction.isChatInputCommand()) {
-      const { commandName } = interaction;
+      const { commandName, guildId } = interaction;
 
-      if (commandName === 'say') {
-        const messageContent = interaction.options.getString('message');
-        const embed = new EmbedBuilder()
-          .setColor(0x5865F2)
-          .setDescription(messageContent)
-          .setTimestamp()
-          .setFooter({ text: `Sent by ${interaction.user.tag}` });
+      // ==========================================
+      // 1. DEPARTMENT SERVER COMMANDS
+      // ==========================================
+      if (guildId === DEPARTMENT_GUILD_ID) {
+        if (commandName === 'case') {
+          await interaction.deferReply({ flags: 64 });
 
-        await interaction.channel.send({ embeds: [embed] });
-        await interaction.reply({ content: 'Message sent successfully as an embed!', flags: 64 });
-      } 
-      else if (commandName === 'promote' && interaction.guildId === MAIN_GUILD_ID) {
-        await interaction.deferReply({ flags: 64 });
+          const targetUser = interaction.options.getUser('user');
+          const reason = interaction.options.getString('reason');
+          const caseChannel = interaction.guild.channels.cache.get(CASE_CHANNEL_ID);
 
-        if (!interaction.member.roles.cache.some(role => role.name.toLowerCase() === PROMO_ROLE_NAME.toLowerCase())) {
-          return await interaction.editReply({ content: '❌ You do not have the required **Promotion Permission** role to use this command.' });
-        }
+          if (caseChannel) {
+            const embed = new EmbedBuilder()
+              .setColor(0xE74C3C)
+              .setTitle('📁 Department Case Log')
+              .setDescription(`A official case file has been opened regarding ${targetUser}.\n\n`)
+              .addFields(
+                { name: '👤 Target User', value: `${targetUser}`, inline: true },
+                { name: 'ℹ️ Reason / Details', value: reason, inline: false },
+                { name: '🪐 Staff Officer', value: `${interaction.user}`, inline: false }
+              )
+              .setTimestamp()
+              .setFooter({ text: 'Western Plains Department System' });
 
-        const targetUser = interaction.options.getUser('user');
-        const newRank = interaction.options.getString('rank');
-        const reason = interaction.options.getString('reason') || 'No reason provided';
-        const promoChannel = interaction.guild.channels.cache.get(PROMO_CHANNEL_ID);
+            const sentMessage = await caseChannel.send({ content: `${targetUser}`, embeds: [embed] });
+            await sentMessage.startThread({
+              name: `Department Case Discussion - ${targetUser.username}`,
+              autoArchiveDuration: 1440,
+              reason: 'Department case discussion thread created automatically.'
+            });
 
-        if (promoChannel) {
-          const embed = new EmbedBuilder()
-            .setColor(0x00FF00)
-            .setTitle('❌🎉 Western Plains Promotion')
-            .setDescription(`Dear ${targetUser},\n\nCongratulations, the Management Team has decided to promote you! Your dedication, professionalism, and commitment to excellence have truly set you apart—keep up the outstanding work as you take on this new role.\n\n`)
-            .addFields(
-              { name: '👤 User Promoted', value: `${targetUser}`, inline: true },
-              { name: '⭐ New Role', value: newRank, inline: true },
-              { name: 'ℹ️ Reason(s)', value: reason, inline: false },
-              { name: '🪐 Staff Issuer', value: `${interaction.user}`, inline: false }
-            )
-            .setTimestamp()
-            .setFooter({ text: 'Western Plains Management System' });
-
-          await promoChannel.send({ content: `${targetUser}`, embeds: [embed] });
-          await interaction.editReply({ content: 'Promotion logged successfully.' });
-        } else {
-          await interaction.editReply({ content: 'Error: Promotion channel not found!' });
-        }
-      } 
-      else if (commandName === 'infraction' && interaction.guildId === MAIN_GUILD_ID) {
-        await interaction.deferReply({ flags: 64 });
-
-        if (!interaction.member.roles.cache.some(role => role.name.toLowerCase() === INFRACTION_ROLE_NAME.toLowerCase())) {
-          return await interaction.editReply({ content: '❌ You do not have the required **Infractions Permission** role to use this command.' });
-        }
-
-        const targetUser = interaction.options.getUser('user');
-        const infractionType = interaction.options.getString('type');
-        const reason = interaction.options.getString('reason');
-        const infractionChannel = interaction.guild.channels.cache.get(INFRACTION_CHANNEL_ID);
-
-        if (infractionChannel) {
-          const embed = new EmbedBuilder()
-            .setColor(0xFF0000)
-            .setTitle('❌ Western Plains Infraction')
-            .setDescription(`Dear ${targetUser},\n\nThe Internal Affairs team has carefully reviewed your recent actions and decided to issue a **${infractionType}**. This decision was made based on the provided evidence of your recent actions.\n\n`)
-            .addFields(
-              { name: '👤 User Infracted', value: `${targetUser}`, inline: true },
-              { name: '⚡ Punishment', value: infractionType, inline: true },
-              { name: 'ℹ️ Reason(s)', value: reason, inline: false },
-              { name: '🪐 Staff Issuer', value: `${interaction.user}`, inline: false }
-            )
-            .setTimestamp()
-            .setFooter({ text: 'Western Plains Management System' });
-
-          const sentMessage = await infractionChannel.send({ content: `${targetUser}`, embeds: [embed] });
-          await sentMessage.startThread({
-            name: `Western Plains Infraction Discussion - ${targetUser.username}`,
-            autoArchiveDuration: 1440,
-            reason: 'Infraction discussion thread created automatically.'
-          });
-
-          await interaction.editReply({ content: 'Infraction logged and discussion thread opened successfully.' });
-        } else {
-          await interaction.editReply({ content: 'Error: Infraction channel not found!' });
+            await interaction.editReply({ content: 'Case logged and discussion thread opened successfully in the department channel.' });
+          } else {
+            await interaction.editReply({ content: 'Error: Target case channel not found in department server!' });
+          }
         }
       }
-      else if (commandName === 'manage-session' && interaction.guildId === MAIN_GUILD_ID) {
-        await interaction.deferReply({ flags: 64 });
 
-        if (!interaction.member.roles.cache.has(MANAGE_SESSION_ROLE_ID)) {
-          return await interaction.editReply({ content: '❌ You do not have the required role to use the **manage-session** command.' });
+      // ==========================================
+      // 2. MAIN SERVER COMMANDS
+      // ==========================================
+      else if (guildId === MAIN_GUILD_ID) {
+        if (commandName === 'say') {
+          const messageContent = interaction.options.getString('message');
+          const embed = new EmbedBuilder()
+            .setColor(0x5865F2)
+            .setDescription(messageContent)
+            .setTimestamp()
+            .setFooter({ text: `Sent by ${interaction.user.tag}` });
+
+          await interaction.channel.send({ embeds: [embed] });
+          await interaction.reply({ content: 'Message sent successfully as an embed!', flags: 64 });
+        } 
+        else if (commandName === 'promote') {
+          await interaction.deferReply({ flags: 64 });
+
+          if (!interaction.member.roles.cache.some(role => role.name.toLowerCase() === PROMO_ROLE_NAME.toLowerCase())) {
+            return await interaction.editReply({ content: '❌ You do not have the required **Promotion Permission** role to use this command.' });
+          }
+
+          const targetUser = interaction.options.getUser('user');
+          const newRank = interaction.options.getString('rank');
+          const reason = interaction.options.getString('reason') || 'No reason provided';
+          const promoChannel = interaction.guild.channels.cache.get(PROMO_CHANNEL_ID);
+
+          if (promoChannel) {
+            const embed = new EmbedBuilder()
+              .setColor(0x00FF00)
+              .setTitle('❌🎉 Western Plains Promotion')
+              .setDescription(`Dear ${targetUser},\n\nCongratulations, the Management Team has decided to promote you! Your dedication, professionalism, and commitment to excellence have truly set you apart—keep up the outstanding work as you take on this new role.\n\n`)
+              .addFields(
+                { name: '👤 User Promoted', value: `${targetUser}`, inline: true },
+                { name: '⭐ New Role', value: newRank, inline: true },
+                { name: 'ℹ️ Reason(s)', value: reason, inline: false },
+                { name: '🪐 Staff Issuer', value: `${interaction.user}`, inline: false }
+              )
+              .setTimestamp()
+              .setFooter({ text: 'Western Plains Management System' });
+
+            await promoChannel.send({ content: `${targetUser}`, embeds: [embed] });
+            await interaction.editReply({ content: 'Promotion logged successfully.' });
+          } else {
+            await interaction.editReply({ content: 'Error: Promotion channel not found!' });
+          }
+        } 
+        else if (commandName === 'infraction') {
+          await interaction.deferReply({ flags: 64 });
+
+          if (!interaction.member.roles.cache.some(role => role.name.toLowerCase() === INFRACTION_ROLE_NAME.toLowerCase())) {
+            return await interaction.editReply({ content: '❌ You do not have the required **Infractions Permission** role to use this command.' });
+          }
+
+          const targetUser = interaction.options.getUser('user');
+          const infractionType = interaction.options.getString('type');
+          const reason = interaction.options.getString('reason');
+          const infractionChannel = interaction.guild.channels.cache.get(INFRACTION_CHANNEL_ID);
+
+          if (infractionChannel) {
+            const embed = new EmbedBuilder()
+              .setColor(0xFF0000)
+              .setTitle('❌ Western Plains Infraction')
+              .setDescription(`Dear ${targetUser},\n\nThe Internal Affairs team has carefully reviewed your recent actions and decided to issue a **${infractionType}**. This decision was made based on the provided evidence of your recent actions.\n\n`)
+              .addFields(
+                { name: '👤 User Infracted', value: `${targetUser}`, inline: true },
+                { name: '⚡ Punishment', value: infractionType, inline: true },
+                { name: 'ℹ️ Reason(s)', value: reason, inline: false },
+                { name: '🪐 Staff Issuer', value: `${interaction.user}`, inline: false }
+              )
+              .setTimestamp()
+              .setFooter({ text: 'Western Plains Management System' });
+
+            const sentMessage = await infractionChannel.send({ content: `${targetUser}`, embeds: [embed] });
+            await sentMessage.startThread({
+              name: `Western Plains Infraction Discussion - ${targetUser.username}`,
+              autoArchiveDuration: 1440,
+              reason: 'Infraction discussion thread created automatically.'
+            });
+
+            await interaction.editReply({ content: 'Infraction logged and discussion thread opened successfully.' });
+          } else {
+            await interaction.editReply({ content: 'Error: Infraction channel not found!' });
+          }
         }
+        else if (commandName === 'manage-session') {
+          await interaction.deferReply({ flags: 64 });
 
-        const votesNeeded = interaction.options.getInteger('votes-needed');
-        const sessionChannel = interaction.guild.channels.cache.get(SESSION_CHANNEL_ID);
+          if (!interaction.member.roles.cache.has(MANAGE_SESSION_ROLE_ID)) {
+            return await interaction.editReply({ content: '❌ You do not have the required role to use the **manage-session** command.' });
+          }
 
-        if (!sessionChannel) {
-          return await interaction.editReply({ content: 'Error: Target session channel not found!' });
+          const votesNeeded = interaction.options.getInteger('votes-needed');
+          const sessionChannel = interaction.guild.channels.cache.get(SESSION_CHANNEL_ID);
+
+          if (!sessionChannel) {
+            return await interaction.editReply({ content: 'Error: Target session channel not found!' });
+          }
+
+          let rolePing = SESSION_ROLE_ID ? `<@&${SESSION_ROLE_ID}>` : '';
+
+          const embed = new EmbedBuilder()
+            .setColor(0xFFA500)
+            .setTitle('📊 Western Plains Session Vote')
+            .setDescription('A session is about to start! Click the button below to cast your vote.')
+            .setImage(BANNER_IMAGE_URL)
+            .addFields(
+              { name: '🎯 Votes Required', value: `${votesNeeded}`, inline: true },
+              { name: '🗳️ Current Votes', value: `0 / ${votesNeeded}`, inline: true },
+              { name: '🪐 Host By', value: `${interaction.user}`, inline: false }
+            )
+            .setTimestamp()
+            .setFooter({ text: 'Western Plains Management System' });
+
+          const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+              .setCustomId('vote_session_btn')
+              .setLabel('Vote')
+              .setStyle(ButtonStyle.Success)
+          );
+
+          const sentMessage = await sessionChannel.send({ 
+            content: rolePing, 
+            embeds: [embed], 
+            components: [row],
+            allowedMentions: { roles: SESSION_ROLE_ID ? [SESSION_ROLE_ID] : [] }
+          });
+
+          activeSessions.set(sentMessage.id, {
+            host: interaction.user,
+            votesNeeded: votesNeeded,
+            voters: [],
+            embed: embed,
+            row: row
+          });
+
+          await interaction.editReply({ content: 'Session voting has been successfully created in the designated channel.' });
         }
-
-        let rolePing = SESSION_ROLE_ID ? `<@&${SESSION_ROLE_ID}>` : '';
-
-        // İlk oylama embedi (Büyük banner üstte)
-        const embed = new EmbedBuilder()
-          .setColor(0xFFA500)
-          .setTitle('📊 Western Plains Session Vote')
-          .setDescription('A session is about to start! Click the button below to cast your vote.')
-          .setImage(BANNER_IMAGE_URL)
-          .addFields(
-            { name: '🎯 Votes Required', value: `${votesNeeded}`, inline: true },
-            { name: '🗳️ Current Votes', value: `0 / ${votesNeeded}`, inline: true },
-            { name: '🪐 Host By', value: `${interaction.user}`, inline: false }
-          )
-          .setTimestamp()
-          .setFooter({ text: 'Western Plains Management System' });
-
-        const row = new ActionRowBuilder().addComponents(
-          new ButtonBuilder()
-            .setCustomId('vote_session_btn')
-            .setLabel('Vote')
-            .setStyle(ButtonStyle.Success)
-        );
-
-        const sentMessage = await sessionChannel.send({ 
-          content: rolePing, 
-          embeds: [embed], 
-          components: [row],
-          allowedMentions: { roles: SESSION_ROLE_ID ? [SESSION_ROLE_ID] : [] }
-        });
-
-        activeSessions.set(sentMessage.id, {
-          host: interaction.user,
-          votesNeeded: votesNeeded,
-          voters: [],
-          embed: embed,
-          row: row
-        });
-
-        await interaction.editReply({ content: 'Session voting has been successfully created in the designated channel.' });
       }
     } 
     else if (interaction.isButton()) {
@@ -243,7 +305,7 @@ client.on('interactionCreate', async interaction => {
           activeSessions.delete(interaction.message.id);
 
           const disabledRow = new ActionRowBuilder().addComponents(
-            newButton = new ButtonBuilder()
+            new ButtonBuilder()
               .setCustomId('vote_session_btn')
               .setLabel('Voting Closed')
               .setStyle(ButtonStyle.Secondary)
@@ -255,9 +317,9 @@ client.on('interactionCreate', async interaction => {
           const voterMentions = session.voters.map(id => `<@${id}>`).join(' ');
           const pingContent = `${hostUser} ${voterMentions}`;
 
-          // Oturum başladığında atılacak olan High Rock tarzı büyük banner'lı embed
           const startEmbed = new EmbedBuilder()
             .setColor(0x00FF00)
+            .setTitle('🚀 SESSION START POLL')
             .setImage(BANNER_IMAGE_URL)
             .setDescription(
               `The **Western Plains Management** team has decided to host a session! All voters are **required** to join, we hope you have fun at our session!\n\n` +
