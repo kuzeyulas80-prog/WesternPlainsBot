@@ -361,6 +361,29 @@ client.on('interactionCreate', async interaction => {
             .setDisabled(true)
         );
 
+        // Talep sahibinin Discord ID'sini embedin içerisinden otomatik bulma
+        const match = originalEmbed.description.match(/<@!?(\d+)>/);
+        if (match) {
+          const targetUserId = match[1];
+          try {
+            const targetUser = await client.users.fetch(targetUserId);
+            if (targetUser) {
+              const dmEmbed = new EmbedBuilder()
+                .setColor(embedColor)
+                .setTitle(isApproved ? '🎉 Staff Request Approved!' : '❌ Staff Request Denied')
+                .setDescription(`Your staff request has been **${isApproved ? 'APPROVED' : 'DENIED'}** by ${interaction.user}.`)
+                .setTimestamp()
+                .setFooter({ text: 'Western Plains Management' });
+
+              await targetUser.send({ embeds: [dmEmbed] }).catch(() => {
+                console.log('Could not send DM to the user (DMs might be closed).');
+              });
+            }
+          } catch (err) {
+            console.error('Error fetching user for DM:', err);
+          }
+        }
+
         await interaction.update({ embeds: [updatedEmbed], components: [disabledRow] });
       }
       else if (interaction.customId.startsWith('start_session_btn_')) {
