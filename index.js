@@ -17,6 +17,7 @@ const MAIN_GUILD_ID = '1420370540899864631';     // Main Server ID
 const PROMO_CHANNEL_ID = '1420459904602341426';  // Promote logs channel ID
 const INFRACTION_CHANNEL_ID = '1420460148194939093'; // Infraction logs channel ID
 const SESSION_CHANNEL_ID = '1511508334040191046';// Manage session target channel ID
+const REQUEST_CHANNEL_ID = '1536753884528246824';// Staff request logs target channel ID
 const CLIENT_ID = '1535592914858541066';         // Bot Client ID
 
 // Rol ID'leri ve İsimleri
@@ -57,6 +58,11 @@ const mainGuildCommands = [
     .setName('manage-session')
     .setDescription('Manages a session voting process.')
     .addIntegerOption(option => option.setName('votes-needed').setDescription('Number of votes needed to start').setRequired(true)),
+  new SlashCommandBuilder()
+    .setName('request')
+    .setDescription('Submit a staff request.')
+    .addStringOption(option => option.setName('roblox-username').setDescription('Your Roblox username').setRequired(true))
+    .addStringOption(option => option.setName('request-text').setDescription('What are you requesting?').setRequired(true)),
   new SlashCommandBuilder()
     .setName('say')
     .setDescription('Broadcasts a message.')
@@ -165,6 +171,47 @@ client.on('interactionCreate', async interaction => {
         } else {
           await interaction.editReply({ content: 'Error: Infraction channel not found!' });
         }
+      }
+      else if (commandName === 'request') {
+        await interaction.deferReply({ flags: 64 });
+
+        const robloxUsername = interaction.options.getString('roblox-username');
+        const requestText = interaction.options.getString('request-text');
+        const requestChannel = interaction.guild.channels.cache.get(REQUEST_CHANNEL_ID);
+
+        if (!requestChannel) {
+          return await interaction.editReply({ content: '❌ Error: Staff request channel not found!' });
+        }
+
+        const requestEmbed = new EmbedBuilder()
+          .setColor(0x3498DB)
+          .setTitle('📋 Staff Request')
+          .setDescription(
+            `👤 **Discord:** ${interaction.user} (${interaction.user.id})\n` +
+            `🎮 **Roblox:** \`${robloxUsername}\`\n\n` +
+            `**What are they requesting?**\n\`\`\`${requestText}\`\`\`\n` +
+            `**Staff Agreement**\n` +
+            `> 🔒 I will not re-submit a request with-in 12 hours as HR & SHR may be busy.\n` +
+            `> 📬 You will receive a direct-message if it is approved/denied.\n` +
+            `> ⚖️ You will not argue if it is denied.\n\n` +
+            `**Status**\n⏳ **PENDING**`
+          )
+          .setTimestamp()
+          .setFooter({ text: 'Western Plains Management' });
+
+        const row = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId('approve_request')
+            .setLabel('Approve')
+            .setStyle(ButtonStyle.Success),
+          new ButtonBuilder()
+            .setCustomId('deny_request')
+            .setLabel('Deny')
+            .setStyle(ButtonStyle.Danger)
+        );
+
+        await requestChannel.send({ embeds: [requestEmbed], components: [row] });
+        await interaction.editReply({ content: '✅ Your staff request has been successfully submitted!' });
       }
       else if (commandName === 'manage-session') {
         await interaction.deferReply({ flags: 64 });
@@ -282,6 +329,40 @@ client.on('interactionCreate', async interaction => {
           await interaction.message.edit({ embeds: [session.embed] });
         }
       } 
+      else if (interaction.customId === 'approve_request' || interaction.customId === 'deny_request') {
+        const originalEmbed = interaction.message.embeds[0];
+        if (!originalEmbed) return;
+
+        const isApproved = interaction.customId === 'approve_request';
+        const statusText = isApproved ? `✅ **APPROVED** by ${interaction.user}` : `❌ **DENIED** by ${interaction.user}`;
+        const embedColor = isApproved ? 0x2ECC71 : 0xE74C3C;
+
+        let description = originalEmbed.description;
+        if (description.includes('**Status**')) {
+          description = description.split('**Status**')[0] + `**Status**\n${statusText}`;
+        } else {
+          description += `\n\n**Status**\n${statusText}`;
+        }
+
+        const updatedEmbed = EmbedBuilder.from(originalEmbed)
+          .setColor(embedColor)
+          .setDescription(description);
+
+        const disabledRow = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId('approve_request')
+            .setLabel('Approve')
+            .setStyle(ButtonStyle.Success)
+            .setDisabled(true),
+          new ButtonBuilder()
+            .setCustomId('deny_request')
+            .setLabel('Deny')
+            .setStyle(ButtonStyle.Danger)
+            .setDisabled(true)
+        );
+
+        await interaction.update({ embeds: [updatedEmbed], components: [disabledRow] });
+      }
       else if (interaction.customId.startsWith('start_session_btn_')) {
         const hostId = interaction.customId.split('_')[3];
 
