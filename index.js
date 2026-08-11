@@ -187,17 +187,19 @@ client.on('interactionCreate', async interaction => {
           .setColor(0x3498DB)
           .setTitle('📋 Staff Request')
           .setDescription(
-            `👤 **Discord:** ${interaction.user} (${interaction.user.id})\n` +
+            `👤 **Discord:** <@${interaction.user.id}>\n` +
             `🎮 **Roblox:** \`${robloxUsername}\`\n\n` +
             `**What are they requesting?**\n\`\`\`${requestText}\`\`\`\n` +
             `**Staff Agreement**\n` +
             `> 🔒 I will not re-submit a request with-in 12 hours as HR & SHR may be busy.\n` +
             `> 📬 You will receive a direct-message if it is approved/denied.\n` +
-            `> ⚖️ You will not argue if it is denied.\n\n` +
-            `**Status**\n⏳ **PENDING**`
+            `> ⚖️ You will not argue if it is denied.`
+          )
+          .addFields(
+            { name: 'Status', value: '⏳ **PENDING**' }
           )
           .setTimestamp()
-          .setFooter({ text: 'Western Plains Management' });
+          .setFooter({ text: `Western Plains Management | author_id:${interaction.user.id}` });
 
         const row = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
@@ -337,16 +339,17 @@ client.on('interactionCreate', async interaction => {
         const statusText = isApproved ? `✅ **APPROVED** by ${interaction.user}` : `❌ **DENIED** by ${interaction.user}`;
         const embedColor = isApproved ? 0x2ECC71 : 0xE74C3C;
 
-        let description = originalEmbed.description;
-        if (description.includes('**Status**')) {
-          description = description.split('**Status**')[0] + `**Status**\n${statusText}`;
-        } else {
-          description += `\n\n**Status**\n${statusText}`;
-        }
+        // Embed'i güncellerken Status alanını değiştiriyoruz
+        const updatedFields = originalEmbed.fields.map(field => {
+          if (field.name === 'Status') {
+            return { name: 'Status', value: statusText };
+          }
+          return field;
+        });
 
         const updatedEmbed = EmbedBuilder.from(originalEmbed)
           .setColor(embedColor)
-          .setDescription(description);
+          .setFields(updatedFields);
 
         const disabledRow = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
@@ -361,17 +364,26 @@ client.on('interactionCreate', async interaction => {
             .setDisabled(true)
         );
 
-        // Talep sahibinin Discord ID'sini embedin içerisinden otomatik bulma
-        const match = originalEmbed.description.match(/<@!?(\d+)>/);
-        if (match) {
-          const targetUserId = match[1];
+        // Talep sahibinin ID'sini footer veya description içerisinden güvenle bulma
+        let targetUserId = null;
+        const footerText = originalEmbed.footer?.text || '';
+        const footerMatch = footerText.match(/author_id:(\d+)/);
+        
+        if (footerMatch) {
+          targetUserId = footerMatch[1];
+        } else {
+          const match = originalEmbed.description.match(/<@!?(\d+)>/);
+          if (match) targetUserId = match[1];
+        }
+
+        if (targetUserId) {
           try {
             const targetUser = await client.users.fetch(targetUserId);
             if (targetUser) {
               const dmEmbed = new EmbedBuilder()
                 .setColor(embedColor)
-                .setTitle(isApproved ? '🎉 Staff Request Approved!' : '❌ Staff Request Denied')
-                .setDescription(`Your staff request has been **${isApproved ? 'APPROVED' : 'DENIED'}** by ${interaction.user}.`)
+                .setTitle(isApproved ? '🎉 Request Approved!' : '❌ Request Denied')
+                .setDescription(`Your request has been **${isApproved ? 'APPROVED' : 'DENIED'}** by ${interaction.user}.`)
                 .setTimestamp()
                 .setFooter({ text: 'Western Plains Management' });
 
