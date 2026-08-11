@@ -116,6 +116,10 @@ client.on('interactionCreate', async interaction => {
           const reason = interaction.options.getString('reason');
           const caseChannel = interaction.guild.channels.cache.get(CASE_CHANNEL_ID);
 
+          if (!targetUser) {
+            return await interaction.editReply({ content: '❌ Error: Target user could not be found!' });
+          }
+
           if (caseChannel) {
             const embed = new EmbedBuilder()
               .setColor(0xE74C3C)
@@ -131,7 +135,7 @@ client.on('interactionCreate', async interaction => {
 
             const sentMessage = await caseChannel.send({ content: `${targetUser}`, embeds: [embed] });
             await sentMessage.startThread({
-              name: `Department Case Discussion - ${targetUser.username}`,
+              name: `Department Case - ${targetUser.username || targetUser.id}`,
               autoArchiveDuration: 1440,
               reason: 'Department case discussion thread created automatically.'
             });
@@ -218,7 +222,7 @@ client.on('interactionCreate', async interaction => {
 
             const sentMessage = await infractionChannel.send({ content: `${targetUser}`, embeds: [embed] });
             await sentMessage.startThread({
-              name: `Western Plains Infraction Discussion - ${targetUser.username}`,
+              name: `Western Plains Infraction Discussion - ${targetUser.username || targetUser.id}`,
               autoArchiveDuration: 1440,
               reason: 'Infraction discussion thread created automatically.'
             });
