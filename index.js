@@ -20,13 +20,17 @@ const SESSION_CHANNEL_ID = '1511508334040191046';// Manage session target channe
 const REQUEST_CHANNEL_ID = '1536753884528246824';// Staff request logs target channel ID
 const CLIENT_ID = '1535592914858541066';         // Bot Client ID
 
-// Rol ID'leri ve İsimleri
-const SESSION_ROLE_ID = '1536126498749026364'; // WP | Session Ping
-const MANAGE_SESSION_ROLE_ID = '1517532669150363859'; // manage-session komutunu kullanabilecek rol
+// Rol ID'leri
+const REQUEST_ROLE_ID = '1420381015544823970';    // /request komutu için rol
+const MANAGE_SESSION_ROLE_ID = '1517532669150363859'; // /manage-session komutu için rol
+const INFRACTION_ROLE_ID = '1517912496818880642'; // /infraction komutu için rol
+const PROMO_ROLE_ID = '1517912557547946007';      // /promote komutu için rol
 
-const PROMO_ROLE_NAME = 'Promotion Permission';
-const INFRACTION_ROLE_NAME = 'Infractions Permission';
-const SESSION_ROLE_NAME = 'WP | Session Ping';
+const SESSION_ROLE_ID = '1536126498749026364'; // WP | Session Ping
+
+// Request Pinglenecek Rol ID'leri
+const REQUEST_PING_ROLE_1 = '1510380042734276809';
+const REQUEST_PING_ROLE_2 = '1510378003543101580';
 
 // Oturum Banner Görseli
 const BANNER_IMAGE_URL = 'https://cdn.discordapp.com/attachments/1510413522033709137/1536312234060546148/Ekran_goruntusu_2026-08-10_105421.png?ex=6a7af1c3&is=6a79a043&hm=0ae48afd5f6e1008aeaf3fa1f4347c310bcd885f90b08334cd4f2304f365a4eb&';
@@ -105,8 +109,8 @@ client.on('interactionCreate', async interaction => {
       else if (commandName === 'promote') {
         await interaction.deferReply({ flags: 64 });
 
-        if (!interaction.member.roles.cache.some(role => role.name.toLowerCase() === PROMO_ROLE_NAME.toLowerCase())) {
-          return await interaction.editReply({ content: '❌ You do not have the required **Promotion Permission** role to use this command.' });
+        if (!interaction.member.roles.cache.has(PROMO_ROLE_ID)) {
+          return await interaction.editReply({ content: '❌ You do not have the required role to use the **promote** command.' });
         }
 
         const targetUser = interaction.options.getUser('user');
@@ -137,8 +141,8 @@ client.on('interactionCreate', async interaction => {
       else if (commandName === 'infraction') {
         await interaction.deferReply({ flags: 64 });
 
-        if (!interaction.member.roles.cache.some(role => role.name.toLowerCase() === INFRACTION_ROLE_NAME.toLowerCase())) {
-          return await interaction.editReply({ content: '❌ You do not have the required **Infractions Permission** role to use this command.' });
+        if (!interaction.member.roles.cache.has(INFRACTION_ROLE_ID)) {
+          return await interaction.editReply({ content: '❌ You do not have the required role to use the **infraction** command.' });
         }
 
         const targetUser = interaction.options.getUser('user');
@@ -175,6 +179,10 @@ client.on('interactionCreate', async interaction => {
       else if (commandName === 'request') {
         await interaction.deferReply({ flags: 64 });
 
+        if (!interaction.member.roles.cache.has(REQUEST_ROLE_ID)) {
+          return await interaction.editReply({ content: '❌ You do not have the required role to use the **request** command.' });
+        }
+
         const robloxUsername = interaction.options.getString('roblox-username');
         const requestText = interaction.options.getString('request-text');
         const requestChannel = interaction.guild.channels.cache.get(REQUEST_CHANNEL_ID);
@@ -182,6 +190,8 @@ client.on('interactionCreate', async interaction => {
         if (!requestChannel) {
           return await interaction.editReply({ content: '❌ Error: Staff request channel not found!' });
         }
+
+        const rolePingContent = `<@&${REQUEST_PING_ROLE_1}> <@&${REQUEST_PING_ROLE_2}>`;
 
         const requestEmbed = new EmbedBuilder()
           .setColor(0x3498DB)
@@ -212,7 +222,13 @@ client.on('interactionCreate', async interaction => {
             .setStyle(ButtonStyle.Danger)
         );
 
-        await requestChannel.send({ embeds: [requestEmbed], components: [row] });
+        await requestChannel.send({ 
+          content: rolePingContent, 
+          embeds: [requestEmbed], 
+          components: [row],
+          allowedMentions: { roles: [REQUEST_PING_ROLE_1, REQUEST_PING_ROLE_2] }
+        });
+        
         await interaction.editReply({ content: '✅ Your staff request has been successfully submitted!' });
       }
       else if (commandName === 'manage-session') {
@@ -339,7 +355,6 @@ client.on('interactionCreate', async interaction => {
         const statusText = isApproved ? `✅ **APPROVED** by ${interaction.user}` : `❌ **DENIED** by ${interaction.user}`;
         const embedColor = isApproved ? 0x2ECC71 : 0xE74C3C;
 
-        // Embed'i güncellerken Status alanını değiştiriyoruz
         const updatedFields = originalEmbed.fields.map(field => {
           if (field.name === 'Status') {
             return { name: 'Status', value: statusText };
@@ -364,7 +379,6 @@ client.on('interactionCreate', async interaction => {
             .setDisabled(true)
         );
 
-        // Talep sahibinin ID'sini footer veya description içerisinden güvenle bulma
         let targetUserId = null;
         const footerText = originalEmbed.footer?.text || '';
         const footerMatch = footerText.match(/author_id:(\d+)/);
