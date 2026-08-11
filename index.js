@@ -28,7 +28,7 @@ const PROMO_ROLE_ID = '1517912557547946007';      // /promote komutu için rol
 
 const SESSION_ROLE_ID = '1536126498749026364'; // WP | Session Ping
 
-// Request Pinglenecek Rol ID'leri
+// Request Pinglenecek ve Butonları Kullanabilecek Rol ID'leri
 const REQUEST_PING_ROLE_1 = '1510380042734276809';
 const REQUEST_PING_ROLE_2 = '1510378003543101580';
 
@@ -348,6 +348,11 @@ client.on('interactionCreate', async interaction => {
         }
       } 
       else if (interaction.customId === 'approve_request' || interaction.customId === 'deny_request') {
+        // Yetki kontrolü: Sadece belirtilen iki rolden birine sahip olanlar basabilir
+        if (!interaction.member.roles.cache.has(REQUEST_PING_ROLE_1) && !interaction.member.roles.cache.has(REQUEST_PING_ROLE_2)) {
+          return await interaction.reply({ content: '❌ You do not have the required role to approve or deny requests!', flags: 64 });
+        }
+
         const originalEmbed = interaction.message.embeds[0];
         if (!originalEmbed) return;
 
