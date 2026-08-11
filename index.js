@@ -112,12 +112,22 @@ client.on('interactionCreate', async interaction => {
         if (commandName === 'case') {
           await interaction.deferReply({ flags: 64 });
 
-          const targetUser = interaction.options.getUser('user');
+          // Kullanıcıyı güvenli bir şekilde yakalama mekanizması
+          let targetUser = interaction.options.getUser('user');
+          if (!targetUser) {
+            const rawUser = interaction.options.get('user');
+            if (rawUser && rawUser.member) {
+              targetUser = rawUser.member.user;
+            } else if (rawUser && rawUser.user) {
+              targetUser = rawUser.user;
+            }
+          }
+
           const reason = interaction.options.getString('reason');
           const caseChannel = interaction.guild.channels.cache.get(CASE_CHANNEL_ID);
 
           if (!targetUser) {
-            return await interaction.editReply({ content: '❌ Error: Target user could not be found!' });
+            return await interaction.editReply({ content: '❌ Error: Target user could not be resolved. Please try re-selecting the user.' });
           }
 
           if (caseChannel) {
