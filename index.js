@@ -18,7 +18,7 @@ const PROMO_CHANNEL_ID = '1420459904602341426';  // Promote logs channel ID
 const INFRACTION_CHANNEL_ID = '1420460148194939093'; // Infraction logs channel ID
 const SESSION_CHANNEL_ID = '1511508334040191046';// Manage session target channel ID
 const REQUEST_CHANNEL_ID = '1536753884528246824';// Staff request logs target channel ID
-const COUNTING_CHANNEL_ID = '1420388672745771099';// Otomatik sayı tepkisi eklenecek kanal ID
+const COUNTING_CHANNEL_ID = '1420388672745771099';// Sayı sayma kanal ID
 const CLIENT_ID = '1535592914858541066';         // Bot Client ID
 
 // Rol ID'leri
@@ -45,6 +45,7 @@ const client = new Client({
 });
 
 const activeSessions = new Map();
+let lastCountNumber = 0; // Sayma kanalı için son söylenen sayı takibi
 
 const mainGuildCommands = [
   new SlashCommandBuilder()
@@ -91,17 +92,22 @@ client.once('ready', async () => {
   }
 });
 
-// Sayı kanalına yazılan mesajlar için otomatik yeşil tik tepkisi
+// Sayı kanalında sıradaki doğru sayı yazıldığında yeşil tik ekleme kontrolü
 client.on('messageCreate', async message => {
-  if (message.author.bot) return; // Botun kendi mesajlarına tepki vermesini önler
+  if (message.author.bot) return; 
   if (message.channelId === COUNTING_CHANNEL_ID) {
-    // Mesajın sadece bir sayı (1'den sonsuza kadar pozitif tam sayı) içerip içermediğini kontrol eder
     const trimmedMsg = message.content.trim();
-    if (/^\d+$/.test(trimmedMsg) && parseInt(trimmedMsg, 10) > 0) {
-      try {
-        await message.react('✅');
-      } catch (error) {
-        console.error('Tepki eklenirken hata oluştu:', error);
+    if (/^\d+$/.test(trimmedMsg)) {
+      const currentNumber = parseInt(trimmedMsg, 10);
+      
+      // Sadece bir önceki sayının tam bir fazlası ise tik at
+      if (currentNumber === lastCountNumber + 1) {
+        lastCountNumber = currentNumber;
+        try {
+          await message.react('✅');
+        } catch (error) {
+          console.error('Tepki eklenirken hata oluştu:', error);
+        }
       }
     }
   }
