@@ -45,7 +45,7 @@ const client = new Client({
 });
 
 const activeSessions = new Map();
-let lastCountNumber = 0; // Sayma kanalı için son söylenen sayı takibi
+let lastCountNumber = 0; // Sayma kanalı için son söylenen sayı
 
 const mainGuildCommands = [
   new SlashCommandBuilder()
@@ -81,6 +81,19 @@ client.once('ready', async () => {
   console.log(`Logged in as ${client.user.tag}!`);
 
   try {
+    // Bot başladığında sayma kanalındaki son sayıyı otomatik algıla
+    const countingChannel = await client.channels.fetch(COUNTING_CHANNEL_ID).catch(() => null);
+    if (countingChannel) {
+      const messages = await countingChannel.messages.fetch({ limit: 10 }).catch(() => null);
+      if (messages) {
+        const validMsg = messages.find(m => /^\d+$/.test(m.content.trim()));
+        if (validMsg) {
+          lastCountNumber = parseInt(validMsg.content.trim(), 10);
+          console.log(`Counting channel initialized. Last number: ${lastCountNumber}`);
+        }
+      }
+    }
+
     console.log('Registering commands to main server...');
     await rest.put(
       Routes.applicationGuildCommands(CLIENT_ID, MAIN_GUILD_ID),
