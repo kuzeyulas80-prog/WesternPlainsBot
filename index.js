@@ -18,7 +18,7 @@ const PROMO_CHANNEL_ID = '1420459904602341426';  // Promote logs channel ID
 const INFRACTION_CHANNEL_ID = '1420460148194939093'; // Infraction logs channel ID
 const SESSION_CHANNEL_ID = '1511508334040191046';// Manage session target channel ID
 const REQUEST_CHANNEL_ID = '1536753884528246824';// Staff request logs target channel ID
-const COUNTING_CHANNEL_ID = '1420388672745771099';// Sayı sayma kanal ID
+const COUNTING_CHANNEL_ID = '1420388672745771099';// Counting channel ID
 const CLIENT_ID = '1535592914858541066';         // Bot Client ID
 
 // Rol ID'leri
@@ -45,15 +45,15 @@ const client = new Client({
 });
 
 const activeSessions = new Map();
-let lastCountNumber = 0; // Sayma kanalı için son söylenen sayı
+let lastCountNumber = 0; // Counting channel last number tracker
 
-// Rastgele eğlenceli hata mesajları
+// Random funny English error messages
 const wrongMessages = [
-  "Eyvahlar olsun! Matematiği halı saha maçında unuttun galiba. Yanlış sayı! Baştan başlıyoruz, sıradaki sayı **1**!",
-  "Aklımdan bir sayı tut dedim ama bunu kastetmemiştim. Hatalı tuşlama dostum, ta başa döndük! Sıra **1**'de.",
-  "Einstein mezarında horon tepiyor şu an. Yanlış sayı girdin, hadi geçmiş olsun, yeniden **1**'den başlıyoruz!",
-  "Gözlerini ovuştur ve tekrar bak bakalım o yazdığın sayıya? Tamamen yanlış! Temiz bir sayfa açıyoruz, sıradaki sayı **1**!",
-  "Matematik hocan seni görse ağlardı. Yanlış sayı! Üzgünüm ama kural kuraldır, şimdi tekrar **1**'den başlıyoruz."
+  "Oh no! Did you forget basic math at home? Wrong number! Back to square one, the next number is **1**!",
+  "I asked for a number, but definitely not that one! Incorrect input, we are resetting back to **1**!",
+  "Albert Einstein is crying in his grave right now. Wrong number! Let's start over from **1**!",
+  "Rub your eyes and look at that number again. Totally incorrect! We are starting fresh from **1**!",
+  "Your math teacher would be so disappointed. Wrong number! Rules are rules, let's restart counting from **1**."
 ];
 
 const mainGuildCommands = [
@@ -113,34 +113,31 @@ client.once('ready', async () => {
   }
 });
 
-// Sayı sayma kanalı kontrolü (Doğru/Yanlış sayı yönetimi)
+// Counting channel control (Correct/Incorrect sequence tracking)
 client.on('messageCreate', async message => {
   if (message.author.bot) return; 
   if (message.channelId === COUNTING_CHANNEL_ID) {
     const trimmedMsg = message.content.trim();
     
-    // Eğer mesaj tam bir sayı ise
     if (/^\d+$/.test(trimmedMsg)) {
       const currentNumber = parseInt(trimmedMsg, 10);
       
-      // Doğru sayı mı? (Bir önceki sayının tam 1 fazlası)
       if (currentNumber === lastCountNumber + 1) {
         lastCountNumber = currentNumber;
         try {
           await message.react('✅');
         } catch (error) {
-          console.error('Tepki eklenirken hata oluştu:', error);
+          console.error('Error adding reaction:', error);
         }
       } else {
-        // Yanlış sayı girildi!
-        lastCountNumber = 0; // Sayıyı baştan (1'e) sıfırlıyoruz
+        lastCountNumber = 0; // Reset counting back to 1
         const randomMsg = wrongMessages[Math.floor(Math.random() * wrongMessages.length)];
         
         try {
           await message.react('❌');
           await message.reply(randomMsg);
         } catch (error) {
-          console.error('Yanlış sayı mesajı gönderilirken hata oluştu:', error);
+          console.error('Error sending wrong count message:', error);
         }
       }
     }
