@@ -47,6 +47,15 @@ const client = new Client({
 const activeSessions = new Map();
 let lastCountNumber = 0; // Sayma kanalı için son söylenen sayı
 
+// Rastgele eğlenceli hata mesajları
+const wrongMessages = [
+  "Eyvahlar olsun! Matematiği halı saha maçında unuttun galiba. Yanlış sayı! Baştan başlıyoruz, sıradaki sayı **1**!",
+  "Aklımdan bir sayı tut dedim ama bunu kastetmemiştim. Hatalı tuşlama dostum, ta başa döndük! Sıra **1**'de.",
+  "Einstein mezarında horon tepiyor şu an. Yanlış sayı girdin, hadi geçmiş olsun, yeniden **1**'den başlıyoruz!",
+  "Gözlerini ovuştur ve tekrar bak bakalım o yazdığın sayıya? Tamamen yanlış! Temiz bir sayfa açıyoruz, sıradaki sayı **1**!",
+  "Matematik hocan seni görse ağlardı. Yanlış sayı! Üzgünüm ama kural kuraldır, şimdi tekrar **1**'den başlıyoruz."
+];
+
 const mainGuildCommands = [
   new SlashCommandBuilder()
     .setName('promote')
@@ -81,7 +90,6 @@ client.once('ready', async () => {
   console.log(`Logged in as ${client.user.tag}!`);
 
   try {
-    // Bot başladığında sayma kanalındaki son sayıyı otomatik algıla
     const countingChannel = await client.channels.fetch(COUNTING_CHANNEL_ID).catch(() => null);
     if (countingChannel) {
       const messages = await countingChannel.messages.fetch({ limit: 10 }).catch(() => null);
@@ -105,21 +113,34 @@ client.once('ready', async () => {
   }
 });
 
-// Sayı kanalında sıradaki doğru sayı yazıldığında yeşil tik ekleme kontrolü
+// Sayı sayma kanalı kontrolü (Doğru/Yanlış sayı yönetimi)
 client.on('messageCreate', async message => {
   if (message.author.bot) return; 
   if (message.channelId === COUNTING_CHANNEL_ID) {
     const trimmedMsg = message.content.trim();
+    
+    // Eğer mesaj tam bir sayı ise
     if (/^\d+$/.test(trimmedMsg)) {
       const currentNumber = parseInt(trimmedMsg, 10);
       
-      // Sadece bir önceki sayının tam bir fazlası ise tik at
+      // Doğru sayı mı? (Bir önceki sayının tam 1 fazlası)
       if (currentNumber === lastCountNumber + 1) {
         lastCountNumber = currentNumber;
         try {
           await message.react('✅');
         } catch (error) {
           console.error('Tepki eklenirken hata oluştu:', error);
+        }
+      } else {
+        // Yanlış sayı girildi!
+        lastCountNumber = 0; // Sayıyı baştan (1'e) sıfırlıyoruz
+        const randomMsg = wrongMessages[Math.floor(Math.random() * wrongMessages.length)];
+        
+        try {
+          await message.react('❌');
+          await message.reply(randomMsg);
+        } catch (error) {
+          console.error('Yanlış sayı mesajı gönderilirken hata oluştu:', error);
         }
       }
     }
