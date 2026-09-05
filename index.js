@@ -18,6 +18,7 @@ const PROMO_CHANNEL_ID = '1420459904602341426';  // Promote logs channel ID
 const INFRACTION_CHANNEL_ID = '1420460148194939093'; // Infraction logs channel ID
 const SESSION_CHANNEL_ID = '1511508334040191046';// Manage session target channel ID
 const REQUEST_CHANNEL_ID = '1536753884528246824';// Staff request logs target channel ID
+const TRAINING_CHANNEL_ID = '1510395507434852514';// Training channel ID
 const COUNTING_CHANNEL_ID = '1420388672745771099';// Counting channel ID
 const CLIENT_ID = '1535592914858541066';         // Bot Client ID
 
@@ -28,6 +29,7 @@ const INFRACTION_ROLE_ID = '1517912496818880642'; // /infraction komutu için ro
 const PROMO_ROLE_ID = '1517912557547946007';      // /promote komutu için rol
 
 const SESSION_ROLE_ID = '1536126498749026364'; // WP | Session Ping
+const TRAINING_ROLE_ID = '1510392433752412352';// Training / Trainee Ping Role
 
 // Request Pinglenecek ve Butonları Kullanabilecek Rol ID'leri
 const REQUEST_PING_ROLE_1 = '1510380042734276809';
@@ -45,9 +47,10 @@ const client = new Client({
 });
 
 const activeSessions = new Map();
+const activeTrainings = new Map(); // Trainings tracker
 let lastCountNumber = 0; // Counting channel last number tracker
 
-// Random funny English error messages
+// Random funny English error messages for counting
 const wrongMessages = [
   "Oh no! Did you forget basic math at home? Wrong number! Back to square one, the next number is **1**!",
   "I asked for a number, but definitely not that one! Incorrect input, we are resetting back to **1**!",
@@ -73,6 +76,10 @@ const mainGuildCommands = [
     .setName('manage-session')
     .setDescription('Manages a session voting process.')
     .addIntegerOption(option => option.setName('votes-needed').setDescription('Number of votes needed to start').setRequired(true)),
+  new SlashCommandBuilder()
+    .setName('training')
+    .setDescription('Manages a staff training session.')
+    .addStringOption(option => option.setName('time').setDescription('Time of the training').setRequired(true)),
   new SlashCommandBuilder()
     .setName('request')
     .setDescription('Submit a staff request.')
@@ -338,160 +345,21 @@ client.on('interactionCreate', async interaction => {
 
         await interaction.editReply({ content: 'Session voting has been successfully created in the designated channel.' });
       }
-    } 
-    else if (interaction.isButton()) {
-      if (interaction.customId === 'vote_session_btn') {
-        const session = activeSessions.get(interaction.message.id);
+      else if (commandName === 'training') {
+        await interaction.deferReply({ flags: 64 });
 
-        if (!session) {
-          return await interaction.reply({ content: '❌ This voting session has expired or is invalid.', flags: 64 });
+        if (!interaction.member.roles.cache.has(MANAGE_SESSION_ROLE_ID)) {
+          return await interaction.editReply({ content: '❌ You do not have the required role to use the **training** command.' });
         }
 
-        if (session.voters.includes(interaction.user.id)) {
-          return await interaction.reply({ content: '❌ You have already cast your vote!', flags: 64 });
+        const trainingTime = interaction.options.getString('time');
+        const trainingChannel = interaction.guild.channels.cache.get(TRAINING_CHANNEL_ID);
+
+        if (!trainingChannel) {
+          return await interaction.editReply({ content: 'Error: Target training channel not found!' });
         }
 
-        session.voters.push(interaction.user.id);
-        const currentVotes = session.voters.length;
+        let rolePing = TRAINING_ROLE_ID ? `<@&${TRAINING_ROLE_ID}>` : '';
 
-        await interaction.reply({ content: '✅ Your vote has been casted!', flags: 64 });
-
-        if (currentVotes >= session.votesNeeded) {
-          const hostUser = session.host;
-          activeSessions.delete(interaction.message.id);
-
-          const disabledRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-              .setCustomId('vote_session_btn')
-              .setLabel('Voting Closed')
-              .setStyle(ButtonStyle.Secondary)
-              .setDisabled(true)
-          );
-
-          await interaction.message.edit({ components: [disabledRow] });
-
-          const voterMentions = session.voters.map(id => `<@${id}>`).join(' ');
-          const pingContent = `${hostUser} ${voterMentions}`;
-
-          const startEmbed = new EmbedBuilder()
-            .setColor(0x00FF00)
-            .setTitle('🚀 SESSION START POLL')
-            .setImage(BANNER_IMAGE_URL)
-            .setDescription(
-              `The **Western Plains Management** team has decided to host a session! All voters are **required** to join, we hope you have fun at our session!\n\n` +
-              `🌐 **Server Information**\n\n` +
-              `• **Server Name:** Western Plains RP | Realistic\n` +
-              `• **Server Code:** WPRPS\n` +
-              `• **Hosted By:** ${hostUser}\n` +
-              `• **Participants:** ${voterMentions || 'None'}`
-            )
-            .setTimestamp()
-            .setFooter({ text: 'Western Plains Management System' });
-
-          const startRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-              .setCustomId(`start_session_btn_${hostUser.id}`)
-              .setLabel('Start Session')
-              .setStyle(ButtonStyle.Primary)
-          );
-
-          await interaction.channel.send({ content: pingContent, embeds: [startEmbed], components: [startRow] });
-        } else {
-          session.embed.data.fields[1].value = `${currentVotes} / ${session.votesNeeded}`;
-          await interaction.message.edit({ embeds: [session.embed] });
-        }
-      } 
-      else if (interaction.customId === 'approve_request' || interaction.customId === 'deny_request') {
-        if (!interaction.member.roles.cache.has(REQUEST_PING_ROLE_1) && !interaction.member.roles.cache.has(REQUEST_PING_ROLE_2)) {
-          return await interaction.reply({ content: '❌ You do not have the required role to approve or deny requests!', flags: 64 });
-        }
-
-        const originalEmbed = interaction.message.embeds[0];
-        if (!originalEmbed) return;
-
-        const isApproved = interaction.customId === 'approve_request';
-        const statusText = isApproved ? `✅ **APPROVED** by ${interaction.user}` : `❌ **DENIED** by ${interaction.user}`;
-        const embedColor = isApproved ? 0x2ECC71 : 0xE74C3C;
-
-        const updatedFields = originalEmbed.fields.map(field => {
-          if (field.name === 'Status') {
-            return { name: 'Status', value: statusText };
-          }
-          return field;
-        });
-
-        const updatedEmbed = EmbedBuilder.from(originalEmbed)
-          .setColor(embedColor)
-          .setFields(updatedFields);
-
-        const disabledRow = new ActionRowBuilder().addComponents(
-          new ButtonBuilder()
-            .setCustomId('approve_request')
-            .setLabel('Approve')
-            .setStyle(ButtonStyle.Success)
-            .setDisabled(true),
-          new ButtonBuilder()
-            .setCustomId('deny_request')
-            .setLabel('Deny')
-            .setStyle(ButtonStyle.Danger)
-            .setDisabled(true)
-        );
-
-        let targetUserId = null;
-        const footerText = originalEmbed.footer?.text || '';
-        const footerMatch = footerText.match(/author_id:(\d+)/);
-        
-        if (footerMatch) {
-          targetUserId = footerMatch[1];
-        } else {
-          const match = originalEmbed.description.match(/<@!?(\d+)>/);
-          if (match) targetUserId = match[1];
-        }
-
-        if (targetUserId) {
-          try {
-            const targetUser = await client.users.fetch(targetUserId);
-            if (targetUser) {
-              const dmEmbed = new EmbedBuilder()
-                .setColor(embedColor)
-                .setTitle(isApproved ? '🎉 Request Approved!' : '❌ Request Denied')
-                .setDescription(`Your request has been **${isApproved ? 'APPROVED' : 'DENIED'}** by ${interaction.user}.`)
-                .setTimestamp()
-                .setFooter({ text: 'Western Plains Management' });
-
-              await targetUser.send({ embeds: [dmEmbed] }).catch(() => {
-                console.log('Could not send DM to the user (DMs might be closed).');
-              });
-            }
-          } catch (err) {
-            console.error('Error fetching user for DM:', err);
-          }
-        }
-
-        await interaction.update({ embeds: [updatedEmbed], components: [disabledRow] });
-      }
-      else if (interaction.customId.startsWith('start_session_btn_')) {
-        const hostId = interaction.customId.split('_')[3];
-
-        if (interaction.user.id !== hostId) {
-          return await interaction.reply({ content: '❌ Only the user who started this session can click this button!', flags: 64 });
-        }
-
-        const disabledStartRow = new ActionRowBuilder().addComponents(
-          new ButtonBuilder()
-            .setCustomId('start_session_btn_disabled')
-            .setLabel('Session Started')
-            .setStyle(ButtonStyle.Success)
-            .setDisabled(true)
-        );
-
-        await interaction.update({ components: [disabledStartRow] });
-        await interaction.channel.send({ content: `🚀 **The session hosted by <@${hostId}> is starting right now!**` });
-      }
-    }
-  } catch (error) {
-    console.error('Interaction Error:', error);
-  }
-});
-
-client.login(process.env.TOKEN);
+        const embed = new EmbedBuilder()
+          .setColor(0x9B59B6)
