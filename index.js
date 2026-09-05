@@ -79,7 +79,8 @@ const mainGuildCommands = [
   new SlashCommandBuilder()
     .setName('training')
     .setDescription('Manages a staff training session.')
-    .addStringOption(option => option.setName('time').setDescription('Time of the training').setRequired(true)),
+    .addStringOption(option => option.setName('time').setDescription('Time of the training').setRequired(true))
+    .addStringOption(option => option.setName('location').setDescription('Location/Link of the training').setRequired(true)),
   new SlashCommandBuilder()
     .setName('request')
     .setDescription('Submit a staff request.')
@@ -352,6 +353,7 @@ client.on('interactionCreate', async interaction => {
         }
 
         const trainingTime = interaction.options.getString('time');
+        const trainingLocation = interaction.options.getString('location');
         const trainingChannel = interaction.guild.channels.cache.get(TRAINING_CHANNEL_ID);
 
         if (!trainingChannel) {
@@ -368,6 +370,7 @@ client.on('interactionCreate', async interaction => {
           .addFields(
             { name: '👨‍🏫 Trainer', value: `${interaction.user}`, inline: true },
             { name: '⏰ Time', value: trainingTime, inline: true },
+            { name: '📍 Location', value: trainingLocation, inline: false },
             { name: '👥 Participants (0)', value: 'None', inline: false }
           )
           .setTimestamp()
@@ -390,6 +393,7 @@ client.on('interactionCreate', async interaction => {
         activeTrainings.set(sentMessage.id, {
           trainer: interaction.user,
           time: trainingTime,
+          location: trainingLocation,
           participants: [],
           embed: embed
         });
@@ -475,8 +479,8 @@ client.on('interactionCreate', async interaction => {
 
         await interaction.reply({ content: '✅ You have successfully joined the training session!', flags: 64 });
 
-        training.embed.data.fields[2].name = `👥 Participants (${training.participants.length})`;
-        training.embed.data.fields[2].value = participantMentions || 'None';
+        training.embed.data.fields[3].name = `👥 Participants (${training.participants.length})`;
+        training.embed.data.fields[3].value = participantMentions || 'None';
 
         await interaction.message.edit({ embeds: [training.embed] });
       }
