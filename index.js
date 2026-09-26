@@ -35,7 +35,7 @@ const TRAINING_ROLE_ID = '1510392433752412352';// Training / Trainee Ping Role
 const REQUEST_PING_ROLE_1 = '1510380042734276809';
 const REQUEST_PING_ROLE_2 = '1510378003543101580';
 
-// Banner Görseli (Discord CDN linki ile güncellendi)
+// Banner Görseli
 const BANNER_IMAGE_URL = 'https://cdn.discordapp.com/attachments/1510413522033709137/1552636540608569426/Gemini_Generated_Image_ninop4ninop4nino.jpg';
 
 const client = new Client({
@@ -311,12 +311,14 @@ client.on('interactionCreate', async interaction => {
           .setColor(0x2F3136)
           .setImage(BANNER_IMAGE_URL)
           .setDescription(
-            `The **Western Plains Roleplay** staff team has decided to host a session! All voters are required to join, we hope you have fun at our session!\n\n` +
-            `🟢 **Server Information**\n\n` +
-            `**Servername:** Western Plains Roleplay | Realistic\n` +
-            `**Server Code:** WPRPS\n` +
-            `**Votes Required:** ${votesNeeded}\n` +
-            `**Current Votes:** 0 / ${votesNeeded}`
+            `The **Western Plains Roleplay** staff team has decided to host a session! All voters are required to join, we hope you have fun at our session!`
+          )
+          .addFields(
+            { name: 'Server Information', value: '\u200b', inline: false },
+            { name: 'Servername', value: 'Western Plains Roleplay | Realistic', inline: false },
+            { name: 'Server Code', value: 'WPRPS', inline: false },
+            { name: 'Votes Required', value: `${votesNeeded}`, inline: true },
+            { name: 'Current Votes', value: `0 / ${votesNeeded}`, inline: true }
           )
           .setTimestamp()
           .setFooter({ text: 'Western Plains Management System' });
@@ -366,12 +368,14 @@ client.on('interactionCreate', async interaction => {
           .setColor(0x2F3136)
           .setImage(BANNER_IMAGE_URL)
           .setDescription(
-            `A staff training session has been scheduled! All trainees are required to join.\n\n` +
-            `🟢 **Training Information**\n\n` +
-            `**Trainer:** ${interaction.user}\n` +
-            `**Time:** ${trainingTime}\n` +
-            `**Location:** ${trainingLocation}\n` +
-            `**Participants (0):** None`
+            `A staff training session has been scheduled! All trainees are required to join.`
+          )
+          .addFields(
+            { name: 'Training Information', value: '\u200b', inline: false },
+            { name: 'Trainer', value: `${interaction.user}`, inline: true },
+            { name: 'Time', value: trainingTime, inline: true },
+            { name: 'Location', value: trainingLocation, inline: false },
+            { name: 'Participants (0)', value: 'None', inline: false }
           )
           .setTimestamp()
           .setFooter({ text: 'Western Plains Management System' });
@@ -439,11 +443,13 @@ client.on('interactionCreate', async interaction => {
             .setColor(0x2F3136)
             .setImage(BANNER_IMAGE_URL)
             .setDescription(
-              `The **Western Plains Roleplay** staff team has decided to host a session! All voters are required to join, we hope you have fun at our session!\n\n` +
-              `🟢 **Server Information**\n\n` +
-              `**Servername:** Western Plains Roleplay | Realistic\n` +
-              `**Server Code:** WPRPS\n` +
-              `**Hosted By:** ${hostUser}`
+              `The **Western Plains Roleplay** staff team has decided to host a session! All voters are required to join, we hope you have fun at our session!`
+            )
+            .addFields(
+              { name: 'Server Information', value: '\u200b', inline: false },
+              { name: 'Servername', value: 'Western Plains Roleplay | Realistic', inline: false },
+              { name: 'Server Code', value: 'WPRPS', inline: false },
+              { name: 'Hosted By', value: `${hostUser}`, inline: false }
             )
             .setTimestamp()
             .setFooter({ text: 'Western Plains Management System' });
@@ -462,11 +468,8 @@ client.on('interactionCreate', async interaction => {
             allowedMentions: { roles: [SESSION_ROLE_ID], users: session.voters }
           });
         } else {
-          const updatedDesc = session.embed.data.description.replace(
-            /Current Votes: \d+ \/ \d+/,
-            `Current Votes: ${currentVotes} / ${session.votesNeeded}`
-          );
-          session.embed.setDescription(updatedDesc);
+          // Fields güncellemesi (Index 4: Current Votes)
+          session.embed.data.fields[4].value = `${currentVotes} / ${session.votesNeeded}`;
           await interaction.message.edit({ embeds: [session.embed] });
         }
       } 
@@ -486,11 +489,8 @@ client.on('interactionCreate', async interaction => {
 
         await interaction.reply({ content: '✅ You have successfully joined the training session!', flags: 64 });
 
-        const updatedDesc = training.embed.data.description.replace(
-          /Participants \(\d+\): [\s\S]*$/,
-          `Participants (${training.participants.length}): ${participantMentions || 'None'}`
-        );
-        training.embed.setDescription(updatedDesc);
+        training.embed.data.fields[4].name = `Participants (${training.participants.length})`;
+        training.embed.data.fields[4].value = participantMentions || 'None';
 
         await interaction.message.edit({ embeds: [training.embed] });
       }
