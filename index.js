@@ -445,11 +445,13 @@ client.on('interactionCreate', async interaction => {
           const voterMentions = session.voters.map(id => `<@${id}>`).join(', ');
           const pingContent = `<@&${SESSION_ROLE_ID}> | Voters: ${voterMentions}`;
 
+          // Profesyonel Başlangıç Embedi
           const startEmbed = new EmbedBuilder()
             .setColor(0x2F3136)
             .setImage(BANNER_IMAGE_URL)
             .setDescription(
-              `The **Western Plains Roleplay** staff team has decided to host a session! All voters are required to join, we hope you have fun at our session!`
+              `🚀 **The session is starting right now!**\n\n` +
+              `The **Western Plains Roleplay** staff team has decided to host a session! All voters and participants are required to join, we hope you have fun at our session!`
             )
             .addFields(
               { name: 'Server Information', value: '\u200b', inline: false },
@@ -463,7 +465,7 @@ client.on('interactionCreate', async interaction => {
           const startRow = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
               .setCustomId(`start_session_btn_${hostUser.id}`)
-              .setLabel('Start Session')
+              .setLabel('Session Started')
               .setStyle(ButtonStyle.Success),
             new ButtonBuilder()
               .setLabel('Join Game')
@@ -580,6 +582,9 @@ client.on('interactionCreate', async interaction => {
           return await interaction.reply({ content: '❌ Only the host who created this session can click this button!', flags: 64 });
         }
 
+        const originalEmbed = interaction.message.embeds[0];
+        const updatedEmbed = EmbedBuilder.from(originalEmbed);
+
         const disabledStartRow = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
             .setCustomId('start_session_btn_disabled')
@@ -592,8 +597,7 @@ client.on('interactionCreate', async interaction => {
             .setURL(ROBLOX_GAME_URL)
         );
 
-        await interaction.update({ components: [disabledStartRow] });
-        await interaction.channel.send({ content: `🚀 **The session hosted by <@${hostId}> is starting right now!**` });
+        await interaction.update({ embeds: [updatedEmbed], components: [disabledStartRow] });
       }
     }
   } catch (error) {
