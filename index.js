@@ -35,7 +35,7 @@ const TRAINING_ROLE_ID = '1510392433752412352';// Training / Trainee Ping Role
 const REQUEST_PING_ROLE_1 = '1510380042734276809';
 const REQUEST_PING_ROLE_2 = '1510378003543101580';
 
-// Banner Görseli
+// Banner Görseli (Güvenli Discord CDN formatı)
 const BANNER_IMAGE_URL = 'https://cdn.discordapp.com/attachments/1510413522033709137/1552636540608569426/Gemini_Generated_Image_ninop4ninop4nino.jpg';
 
 const client = new Client({
@@ -341,8 +341,7 @@ client.on('interactionCreate', async interaction => {
           host: interaction.user,
           votesNeeded: votesNeeded,
           voters: [],
-          embed: embed,
-          row: row
+          votes: 0
         });
 
         await interaction.editReply({ content: 'Session voting has been successfully created in the designated channel.' });
@@ -398,8 +397,7 @@ client.on('interactionCreate', async interaction => {
           trainer: interaction.user,
           time: trainingTime,
           location: trainingLocation,
-          participants: [],
-          embed: embed
+          participants: []
         });
 
         await interaction.editReply({ content: 'Staff training has been successfully created in the designated channel.' });
@@ -418,9 +416,14 @@ client.on('interactionCreate', async interaction => {
         }
 
         session.voters.push(interaction.user.id);
-        const currentVotes = session.voters.length;
+        session.votes++;
+        const currentVotes = session.votes;
 
         await interaction.reply({ content: '✅ Your vote has been casted!', flags: 64 });
+
+        const originalEmbed = interaction.message.embeds[0];
+        const updatedEmbed = EmbedBuilder.from(originalEmbed);
+        updatedEmbed.data.fields[4].value = `${currentVotes} / ${session.votesNeeded}`;
 
         if (currentVotes >= session.votesNeeded) {
           const hostUser = session.host;
@@ -434,7 +437,7 @@ client.on('interactionCreate', async interaction => {
               .setDisabled(true)
           );
 
-          await interaction.message.edit({ components: [disabledRow] });
+          await interaction.message.edit({ embeds: [updatedEmbed], components: [disabledRow] });
 
           const voterMentions = session.voters.map(id => `<@${id}>`).join(', ');
           const pingContent = `<@&${SESSION_ROLE_ID}> | Voters: ${voterMentions}`;
@@ -468,9 +471,7 @@ client.on('interactionCreate', async interaction => {
             allowedMentions: { roles: [SESSION_ROLE_ID], users: session.voters }
           });
         } else {
-          // Fields güncellemesi (Index 4: Current Votes)
-          session.embed.data.fields[4].value = `${currentVotes} / ${session.votesNeeded}`;
-          await interaction.message.edit({ embeds: [session.embed] });
+          await interaction.message.edit({ embeds: [updatedEmbed] });
         }
       } 
       else if (interaction.customId === 'join_training_btn') {
@@ -489,10 +490,12 @@ client.on('interactionCreate', async interaction => {
 
         await interaction.reply({ content: '✅ You have successfully joined the training session!', flags: 64 });
 
-        training.embed.data.fields[4].name = `Participants (${training.participants.length})`;
-        training.embed.data.fields[4].value = participantMentions || 'None';
+        const originalEmbed = interaction.message.embeds[0];
+        const updatedEmbed = EmbedBuilder.from(originalEmbed);
+        updatedEmbed.data.fields[4].name = `Participants (${training.participants.length})`;
+        updatedEmbed.data.fields[4].value = participantMentions || 'None';
 
-        await interaction.message.edit({ embeds: [training.embed] });
+        await interaction.message.edit({ embeds: [updatedEmbed] });
       }
       else if (interaction.customId === 'approve_request' || interaction.customId === 'deny_request') {
         if (!interaction.member.roles.cache.has(REQUEST_PING_ROLE_1) && !interaction.member.roles.cache.has(REQUEST_PING_ROLE_2)) {
