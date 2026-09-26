@@ -309,17 +309,16 @@ client.on('interactionCreate', async interaction => {
         let rolePing = SESSION_ROLE_ID ? `<@&${SESSION_ROLE_ID}>` : '';
 
         const embed = new EmbedBuilder()
-          .setColor(0x2F3136) // Professional dark sleek border color
-          .setTitle('SYSTEM SESSION VOTE')
-          .setDescription(
-            'A new session voting process has been initiated.\n' +
-            'Please cast your vote below to help reach the required threshold.'
-          )
+          .setColor(0x2F3136)
+          .setTitle('SESSIONS')
+          .setDescription('REAL. SERIOUS. ROLEPLAY.')
           .setImage(BANNER_IMAGE_URL)
           .addFields(
-            { name: 'Required Votes', value: `\`\`\`${votesNeeded}\`\`\``, inline: true },
-            { name: 'Current Votes', value: `\`\`\`0 / ${votesNeeded}\`\`\``, inline: true },
-            { name: 'Hosted By', value: `${interaction.user}`, inline: false }
+            { name: 'Server Information', value: '\u200b', inline: false },
+            { name: 'Servername', value: 'Western Plains Roleplay | Realistic', inline: false },
+            { name: 'Server Code', value: 'WPRPS', inline: false },
+            { name: 'Votes Required', value: `${votesNeeded}`, inline: true },
+            { name: 'Current Votes', value: `0 / ${votesNeeded}`, inline: true }
           )
           .setTimestamp()
           .setFooter({ text: 'Western Plains Management System' });
@@ -327,7 +326,7 @@ client.on('interactionCreate', async interaction => {
         const row = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
             .setCustomId('vote_session_btn')
-            .setLabel('Cast Vote')
+            .setLabel('Vote')
             .setStyle(ButtonStyle.Success)
         );
 
@@ -367,10 +366,11 @@ client.on('interactionCreate', async interaction => {
 
         const embed = new EmbedBuilder()
           .setColor(0x2F3136)
-          .setTitle('SYSTEM STAFF TRAINING')
-          .setDescription('A staff training session has been scheduled. Click below to sign up.')
+          .setTitle('STAFF TRAINING')
+          .setDescription('REAL. SERIOUS. ROLEPLAY.')
           .setImage(BANNER_IMAGE_URL)
           .addFields(
+            { name: 'Training Information', value: '\u200b', inline: false },
             { name: 'Trainer', value: `${interaction.user}`, inline: true },
             { name: 'Time', value: trainingTime, inline: true },
             { name: 'Location', value: trainingLocation, inline: false },
@@ -435,20 +435,19 @@ client.on('interactionCreate', async interaction => {
 
           await interaction.message.edit({ components: [disabledRow] });
 
-          const voterMentions = session.voters.map(id => `<@${id}>`).join(' ');
-          const pingContent = `${hostUser}${voterMentions}`;
+          const voterMentions = session.voters.map(id => `<@${id}>`).join(', ');
+          const pingContent = `<@&${SESSION_ROLE_ID}> | Voters: ${voterMentions}`;
 
           const startEmbed = new EmbedBuilder()
             .setColor(0x2F3136)
-            .setTitle('SYSTEM SESSION INITIATED')
+            .setTitle('SESSIONS')
             .setImage(BANNER_IMAGE_URL)
-            .setDescription(
-              `The management team has decided to host a session. All participants must join.\n\n` +
-              `SERVER INFORMATION\n\n` +
-              `• Server Name: Western Plains RP | Realistic\n` +
-              `• Server Code: WPRPS\n` +
-              `• Hosted By: ${hostUser}\n` +
-              `• Participants: ${voterMentions || 'None'}`
+            .setDescription('The Western Plains Roleplay staff team has decided to host a session! All voters are required to join, we hope you have fun at our session!')
+            .addFields(
+              { name: 'Server Information', value: '\u200b', inline: false },
+              { name: 'Servername', value: 'Western Plains Roleplay | Realistic', inline: false },
+              { name: 'Server Code', value: 'WPRPS', inline: false },
+              { name: 'Hosted By', value: `${hostUser}`, inline: false }
             )
             .setTimestamp()
             .setFooter({ text: 'Western Plains Management System' });
@@ -460,9 +459,14 @@ client.on('interactionCreate', async interaction => {
               .setStyle(ButtonStyle.Primary)
           );
 
-          await interaction.channel.send({ content: pingContent, embeds: [startEmbed], components: [startRow] });
+          await interaction.channel.send({ 
+            content: pingContent, 
+            embeds: [startEmbed], 
+            components: [startRow],
+            allowedMentions: { roles: [SESSION_ROLE_ID], users: session.voters }
+          });
         } else {
-          session.embed.data.fields[1].value = `\`\`\`${currentVotes} / ${session.votesNeeded}\`\`\``;
+          session.embed.data.fields[4].value = `${currentVotes} / ${session.votesNeeded}`;
           await interaction.message.edit({ embeds: [session.embed] });
         }
       } 
@@ -482,8 +486,8 @@ client.on('interactionCreate', async interaction => {
 
         await interaction.reply({ content: '✅ You have successfully joined the training session!', flags: 64 });
 
-        training.embed.data.fields[3].name = `Participants (${training.participants.length})`;
-        training.embed.data.fields[3].value = participantMentions || 'None';
+        training.embed.data.fields[4].name = `Participants (${training.participants.length})`;
+        training.embed.data.fields[4].value = participantMentions || 'None';
 
         await interaction.message.edit({ embeds: [training.embed] });
       }
