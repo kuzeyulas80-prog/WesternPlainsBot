@@ -35,7 +35,7 @@ const TRAINING_ROLE_ID = '1510392433752412352';// Training / Trainee Ping Role
 const REQUEST_PING_ROLE_1 = '1510380042734276809';
 const REQUEST_PING_ROLE_2 = '1510378003543101580';
 
-// Yeni Gönderdiğin Banner Görseli
+// Banner Görseli (Görselin tam görünmesi için güncellendi)
 const BANNER_IMAGE_URL = 'https://cdn.discordapp.com/attachments/1510413522033709137/1552636540608569426/Gemini_Generated_Image_ninop4ninop4nino.jpg';
 
 const client = new Client({
@@ -462,7 +462,6 @@ client.on('interactionCreate', async interaction => {
             allowedMentions: { roles: [SESSION_ROLE_ID], users: session.voters }
           });
         } else {
-          // Update Current Votes count in the description text format matching the image layout
           const updatedDesc = session.embed.data.description.replace(
             /Current Votes: \d+ \/ \d+/,
             `Current Votes: ${currentVotes} / ${session.votesNeeded}`
@@ -487,7 +486,6 @@ client.on('interactionCreate', async interaction => {
 
         await interaction.reply({ content: '✅ You have successfully joined the training session!', flags: 64 });
 
-        // Update Participants count and names in description matching layout
         const updatedDesc = training.embed.data.description.replace(
           /Participants \(\d+\): [\s\S]*$/,
           `Participants (${training.participants.length}): ${participantMentions || 'None'}`
