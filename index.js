@@ -35,8 +35,8 @@ const TRAINING_ROLE_ID = '1510392433752412352';// Training / Trainee Ping Role
 const REQUEST_PING_ROLE_1 = '1510380042734276809';
 const REQUEST_PING_ROLE_2 = '1510378003543101580';
 
-// Oturum Banner Görseli
-const BANNER_IMAGE_URL = 'https://cdn.discordapp.com/attachments/1510413522033709137/1536312234060546148/Ekran_goruntusu_2026-08-10_105421.png?ex=6a7af1c3&is=6a79a043&hm=0ae48afd5f6e1008aeaf3fa1f4347c310bcd885f90b08334cd4f2304f365a4eb&';
+// Yeni Gönderdiğin Banner Görseli
+const BANNER_IMAGE_URL = 'https://cdn.discordapp.com/attachments/1510413522033709137/1552636540608569426/Gemini_Generated_Image_ninop4ninop4nino.jpg';
 
 const client = new Client({
   intents: [
@@ -50,7 +50,6 @@ const activeSessions = new Map();
 const activeTrainings = new Map();
 let lastCountNumber = 0;
 
-// Random funny English error messages for counting
 const wrongMessages = [
   "Oh no! Did you forget basic math at home? Wrong number! Back to square one, the next number is **1**!",
   "I asked for a number, but definitely not that one! Incorrect input, we are resetting back to **1**!",
@@ -310,15 +309,14 @@ client.on('interactionCreate', async interaction => {
 
         const embed = new EmbedBuilder()
           .setColor(0x2F3136)
-          .setTitle('SESSIONS')
-          .setDescription('REAL. SERIOUS. ROLEPLAY.')
           .setImage(BANNER_IMAGE_URL)
-          .addFields(
-            { name: 'Server Information', value: '\u200b', inline: false },
-            { name: 'Servername', value: 'Western Plains Roleplay | Realistic', inline: false },
-            { name: 'Server Code', value: 'WPRPS', inline: false },
-            { name: 'Votes Required', value: `${votesNeeded}`, inline: true },
-            { name: 'Current Votes', value: `0 / ${votesNeeded}`, inline: true }
+          .setDescription(
+            `The **Western Plains Roleplay** staff team has decided to host a session! All voters are required to join, we hope you have fun at our session!\n\n` +
+            `🟢 **Server Information**\n\n` +
+            `**Servername:** Western Plains Roleplay | Realistic\n` +
+            `**Server Code:** WPRPS\n` +
+            `**Votes Required:** ${votesNeeded}\n` +
+            `**Current Votes:** 0 / ${votesNeeded}`
           )
           .setTimestamp()
           .setFooter({ text: 'Western Plains Management System' });
@@ -366,15 +364,14 @@ client.on('interactionCreate', async interaction => {
 
         const embed = new EmbedBuilder()
           .setColor(0x2F3136)
-          .setTitle('STAFF TRAINING')
-          .setDescription('REAL. SERIOUS. ROLEPLAY.')
           .setImage(BANNER_IMAGE_URL)
-          .addFields(
-            { name: 'Training Information', value: '\u200b', inline: false },
-            { name: 'Trainer', value: `${interaction.user}`, inline: true },
-            { name: 'Time', value: trainingTime, inline: true },
-            { name: 'Location', value: trainingLocation, inline: false },
-            { name: 'Participants (0)', value: 'None', inline: false }
+          .setDescription(
+            `A staff training session has been scheduled! All trainees are required to join.\n\n` +
+            `🟢 **Training Information**\n\n` +
+            `**Trainer:** ${interaction.user}\n` +
+            `**Time:** ${trainingTime}\n` +
+            `**Location:** ${trainingLocation}\n` +
+            `**Participants (0):** None`
           )
           .setTimestamp()
           .setFooter({ text: 'Western Plains Management System' });
@@ -440,14 +437,13 @@ client.on('interactionCreate', async interaction => {
 
           const startEmbed = new EmbedBuilder()
             .setColor(0x2F3136)
-            .setTitle('SESSIONS')
             .setImage(BANNER_IMAGE_URL)
-            .setDescription('The Western Plains Roleplay staff team has decided to host a session! All voters are required to join, we hope you have fun at our session!')
-            .addFields(
-              { name: 'Server Information', value: '\u200b', inline: false },
-              { name: 'Servername', value: 'Western Plains Roleplay | Realistic', inline: false },
-              { name: 'Server Code', value: 'WPRPS', inline: false },
-              { name: 'Hosted By', value: `${hostUser}`, inline: false }
+            .setDescription(
+              `The **Western Plains Roleplay** staff team has decided to host a session! All voters are required to join, we hope you have fun at our session!\n\n` +
+              `🟢 **Server Information**\n\n` +
+              `**Servername:** Western Plains Roleplay | Realistic\n` +
+              `**Server Code:** WPRPS\n` +
+              `**Hosted By:** ${hostUser}`
             )
             .setTimestamp()
             .setFooter({ text: 'Western Plains Management System' });
@@ -466,7 +462,12 @@ client.on('interactionCreate', async interaction => {
             allowedMentions: { roles: [SESSION_ROLE_ID], users: session.voters }
           });
         } else {
-          session.embed.data.fields[4].value = `${currentVotes} / ${session.votesNeeded}`;
+          // Update Current Votes count in the description text format matching the image layout
+          const updatedDesc = session.embed.data.description.replace(
+            /Current Votes: \d+ \/ \d+/,
+            `Current Votes: ${currentVotes} / ${session.votesNeeded}`
+          );
+          session.embed.setDescription(updatedDesc);
           await interaction.message.edit({ embeds: [session.embed] });
         }
       } 
@@ -486,8 +487,12 @@ client.on('interactionCreate', async interaction => {
 
         await interaction.reply({ content: '✅ You have successfully joined the training session!', flags: 64 });
 
-        training.embed.data.fields[4].name = `Participants (${training.participants.length})`;
-        training.embed.data.fields[4].value = participantMentions || 'None';
+        // Update Participants count and names in description matching layout
+        const updatedDesc = training.embed.data.description.replace(
+          /Participants \(\d+\): [\s\S]*$/,
+          `Participants (${training.participants.length}): ${participantMentions || 'None'}`
+        );
+        training.embed.setDescription(updatedDesc);
 
         await interaction.message.edit({ embeds: [training.embed] });
       }
