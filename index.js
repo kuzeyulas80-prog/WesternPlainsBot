@@ -309,14 +309,17 @@ client.on('interactionCreate', async interaction => {
         let rolePing = SESSION_ROLE_ID ? `<@&${SESSION_ROLE_ID}>` : '';
 
         const embed = new EmbedBuilder()
-          .setColor(0xFFA500)
-          .setTitle('📊 Western Plains Session Vote')
-          .setDescription('A session is about to start! Click the button below to cast your vote.')
+          .setColor(0x2F3136) // Professional dark sleek border color
+          .setTitle('SYSTEM SESSION VOTE')
+          .setDescription(
+            'A new session voting process has been initiated.\n' +
+            'Please cast your vote below to help reach the required threshold.'
+          )
           .setImage(BANNER_IMAGE_URL)
           .addFields(
-            { name: '🎯 Votes Required', value: `${votesNeeded}`, inline: true },
-            { name: '🗳️ Current Votes', value: `0 / ${votesNeeded}`, inline: true },
-            { name: '🪐 Host By', value: `${interaction.user}`, inline: false }
+            { name: 'Required Votes', value: `\`\`\`${votesNeeded}\`\`\``, inline: true },
+            { name: 'Current Votes', value: `\`\`\`0 / ${votesNeeded}\`\`\``, inline: true },
+            { name: 'Hosted By', value: `${interaction.user}`, inline: false }
           )
           .setTimestamp()
           .setFooter({ text: 'Western Plains Management System' });
@@ -324,7 +327,7 @@ client.on('interactionCreate', async interaction => {
         const row = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
             .setCustomId('vote_session_btn')
-            .setLabel('Vote')
+            .setLabel('Cast Vote')
             .setStyle(ButtonStyle.Success)
         );
 
@@ -363,15 +366,15 @@ client.on('interactionCreate', async interaction => {
         let rolePing = TRAINING_ROLE_ID ? `<@&${TRAINING_ROLE_ID}>` : '';
 
         const embed = new EmbedBuilder()
-          .setColor(0x9B59B6)
-          .setTitle('🎓 Western Plains Staff Training')
-          .setDescription('A staff training session has been scheduled! Click the button below to join/sign up.')
+          .setColor(0x2F3136)
+          .setTitle('SYSTEM STAFF TRAINING')
+          .setDescription('A staff training session has been scheduled. Click below to sign up.')
           .setImage(BANNER_IMAGE_URL)
           .addFields(
-            { name: '👨‍🏫 Trainer', value: `${interaction.user}`, inline: true },
-            { name: '⏰ Time', value: trainingTime, inline: true },
-            { name: '📍 Location', value: trainingLocation, inline: false },
-            { name: '👥 Participants (0)', value: 'None', inline: false }
+            { name: 'Trainer', value: `${interaction.user}`, inline: true },
+            { name: 'Time', value: trainingTime, inline: true },
+            { name: 'Location', value: trainingLocation, inline: false },
+            { name: 'Participants (0)', value: 'None', inline: false }
           )
           .setTimestamp()
           .setFooter({ text: 'Western Plains Management System' });
@@ -433,19 +436,19 @@ client.on('interactionCreate', async interaction => {
           await interaction.message.edit({ components: [disabledRow] });
 
           const voterMentions = session.voters.map(id => `<@${id}>`).join(' ');
-          const pingContent = `${hostUser} ${voterMentions}`;
+          const pingContent = `${hostUser}${voterMentions}`;
 
           const startEmbed = new EmbedBuilder()
-            .setColor(0x00FF00)
-            .setTitle('🚀 SESSION START POLL')
+            .setColor(0x2F3136)
+            .setTitle('SYSTEM SESSION INITIATED')
             .setImage(BANNER_IMAGE_URL)
             .setDescription(
-              `The **Western Plains Management** team has decided to host a session! All voters are **required** to join, we hope you have fun at our session!\n\n` +
-              `🌐 **Server Information**\n\n` +
-              `• **Server Name:** Western Plains RP | Realistic\n` +
-              `• **Server Code:** WPRPS\n` +
-              `• **Hosted By:** ${hostUser}\n` +
-              `• **Participants:** ${voterMentions || 'None'}`
+              `The management team has decided to host a session. All participants must join.\n\n` +
+              `SERVER INFORMATION\n\n` +
+              `• Server Name: Western Plains RP | Realistic\n` +
+              `• Server Code: WPRPS\n` +
+              `• Hosted By: ${hostUser}\n` +
+              `• Participants: ${voterMentions || 'None'}`
             )
             .setTimestamp()
             .setFooter({ text: 'Western Plains Management System' });
@@ -459,7 +462,7 @@ client.on('interactionCreate', async interaction => {
 
           await interaction.channel.send({ content: pingContent, embeds: [startEmbed], components: [startRow] });
         } else {
-          session.embed.data.fields[1].value = `${currentVotes} / ${session.votesNeeded}`;
+          session.embed.data.fields[1].value = `\`\`\`${currentVotes} / ${session.votesNeeded}\`\`\``;
           await interaction.message.edit({ embeds: [session.embed] });
         }
       } 
@@ -479,7 +482,7 @@ client.on('interactionCreate', async interaction => {
 
         await interaction.reply({ content: '✅ You have successfully joined the training session!', flags: 64 });
 
-        training.embed.data.fields[3].name = `👥 Participants (${training.participants.length})`;
+        training.embed.data.fields[3].name = `Participants (${training.participants.length})`;
         training.embed.data.fields[3].value = participantMentions || 'None';
 
         await interaction.message.edit({ embeds: [training.embed] });
@@ -493,7 +496,7 @@ client.on('interactionCreate', async interaction => {
         if (!originalEmbed) return;
 
         const isApproved = interaction.customId === 'approve_request';
-        const statusText = isApproved ? `✅ **APPROVED** by ${interaction.user}` : `❌ **DENIED** by ${interaction.user}`;
+        const statusText = isApproved ? `APPROVED by ${interaction.user}` : `DENIED by ${interaction.user}`;
         const embedColor = isApproved ? 0x2ECC71 : 0xE74C3C;
 
         const updatedFields = originalEmbed.fields.map(field => {
@@ -537,7 +540,7 @@ client.on('interactionCreate', async interaction => {
             if (targetUser) {
               const dmEmbed = new EmbedBuilder()
                 .setColor(embedColor)
-                .setTitle(isApproved ? '🎉 Request Approved!' : '❌ Request Denied')
+                .setTitle(isApproved ? 'Request Approved' : 'Request Denied')
                 .setDescription(`Your request has been **${isApproved ? 'APPROVED' : 'DENIED'}** by ${interaction.user}.`)
                 .setTimestamp()
                 .setFooter({ text: 'Western Plains Management' });
