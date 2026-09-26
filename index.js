@@ -35,7 +35,7 @@ const TRAINING_ROLE_ID = '1510392433752412352';// Training / Trainee Ping Role
 const REQUEST_PING_ROLE_1 = '1510380042734276809';
 const REQUEST_PING_ROLE_2 = '1510378003543101580';
 
-// Banner Görseli (Görselin tam görünmesi için güncellendi)
+// Banner Görseli (Discord CDN linki ile güncellendi)
 const BANNER_IMAGE_URL = 'https://cdn.discordapp.com/attachments/1510413522033709137/1552636540608569426/Gemini_Generated_Image_ninop4ninop4nino.jpg';
 
 const client = new Client({
