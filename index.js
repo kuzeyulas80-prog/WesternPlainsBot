@@ -35,7 +35,10 @@ const TRAINING_ROLE_ID = '1510392433752412352';// Training / Trainee Ping Role
 const REQUEST_PING_ROLE_1 = '1510380042734276809';
 const REQUEST_PING_ROLE_2 = '1510378003543101580';
 
-// Banner Görseli (Güvenli Discord CDN formatı)
+// Roblox Game Link
+const ROBLOX_GAME_URL = 'https://www.roblox.com/games/2534724415/Emergency-Response-Liberty-County';
+
+// Banner Görseli
 const BANNER_IMAGE_URL = 'https://cdn.discordapp.com/attachments/1510413522033709137/1552636540608569426/Gemini_Generated_Image_ninop4ninop4nino.jpg';
 
 const client = new Client({
@@ -461,7 +464,11 @@ client.on('interactionCreate', async interaction => {
             new ButtonBuilder()
               .setCustomId(`start_session_btn_${hostUser.id}`)
               .setLabel('Start Session')
-              .setStyle(ButtonStyle.Primary)
+              .setStyle(ButtonStyle.Success),
+            new ButtonBuilder()
+              .setLabel('Join Game')
+              .setStyle(ButtonStyle.Link)
+              .setURL(ROBLOX_GAME_URL)
           );
 
           await interaction.channel.send({ 
@@ -570,15 +577,19 @@ client.on('interactionCreate', async interaction => {
         const hostId = interaction.customId.split('_')[3];
 
         if (interaction.user.id !== hostId) {
-          return await interaction.reply({ content: '❌ Only the user who started this session can click this button!', flags: 64 });
+          return await interaction.reply({ content: '❌ Only the host who created this session can click this button!', flags: 64 });
         }
 
         const disabledStartRow = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
             .setCustomId('start_session_btn_disabled')
             .setLabel('Session Started')
-            .setStyle(ButtonStyle.Success)
-            .setDisabled(true)
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(true),
+          new ButtonBuilder()
+            .setLabel('Join Game')
+            .setStyle(ButtonStyle.Link)
+            .setURL(ROBLOX_GAME_URL)
         );
 
         await interaction.update({ components: [disabledStartRow] });
